@@ -1,0 +1,24 @@
+version: "3.9"
+
+services:
+  inventory-service:
+    build: ./inventory-service
+    container_name: inventory-service
+    ports:
+      - "8000:8000"
+    
+    environment:
+      - INVENTORY_URL=http://inventory-service:8000
+      - ORDERS_URL=http://orders-service:8001
+      - PUBLIC_INVENTORY_URL=http://127.0.0.1:8000
+      - PUBLIC_ORDERS_URL=http://127.0.0.1:8001
+
+  orders-service:
+    build: ./orders-service
+    container_name: orders-service
+    environment:
+      - INVENTORY_URL=http://inventory-service:8000
+    ports:
+      - "8001:8001"
+    depends_on:
+      - inventory-service

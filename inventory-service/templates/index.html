@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mike's Mystery Machine</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; background: #f4f4f9; }
+        h1 { color: #4a90e2; margin-top: 50px; }
+        p { font-size: 18px; }
+        .inventory-link {
+            margin-top: 20px;
+            display: inline-block;
+            font-size: 20px;
+            color: #333;
+            text-decoration: none;
+            border: 1px solid #4a90e2;
+            padding: 10px 20px;
+            border-radius: 8px;
+            background: #eaf3fc;
+        }
+        .inventory-link:hover {
+            background: #d9ebfa;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚐 Welcome to Mike's Mystery Machine 🚐</h1>
+    <p>A fun little DevOps-powered shop demo!</p>
+    <a href="{{ inventory }}/inventory" class="inventory-link">🛒 View Inventory</a>
+    <br><br>
+    <a href="{{ orders }}/orders" class="inventory-link">📦 View Orders</a>
+    <br><br>
+    <a href="{{ orders }}/orders-with-inventory" class="inventory-link">🔗 Orders + Inventory</a>
+</body>
+</html>
+
