@@ -1,20 +1,13 @@
 import os
 from fastapi import FastAPI, Request
-from contextlib import asynccontextmanager
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-from .db import init_db
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Startup logic
-    init_db()
-    yield
-    # Shutdown logic (optional cleanup)
+
     
 #Initialize the app
-app = FastAPI(lifespan=lifespan)
+app = FastAPI()
 
 #Setup templating
 templates = Jinja2Templates(directory="templates")
