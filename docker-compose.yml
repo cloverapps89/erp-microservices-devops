@@ -1,9 +1,13 @@
 version: "3.9"
 
 services:
+
   inventory-service:
     build: ./inventory-service
     container_name: inventory-service
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+    - ./inventory-service:/app
     ports:
       - "8000:8000"
     
@@ -12,10 +16,14 @@ services:
       - ORDERS_URL=http://orders-service:8001
       - PUBLIC_INVENTORY_URL=http://127.0.0.1:8000
       - PUBLIC_ORDERS_URL=http://127.0.0.1:8001
+      
 
   orders-service:
     build: ./orders-service
     container_name: orders-service
+    command: uvicorn main:app --host 0.0.0.0 --port 8001 --reload
+    volumes:
+    - ./orders-service:/app
     environment:
       - INVENTORY_URL=http://inventory-service:8000
     ports:

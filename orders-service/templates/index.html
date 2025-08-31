@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Orders with Inventory</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <div class="container py-4">
+        <h1 class="mb-4">📦 Orders with Inventory</h1>
+
+        {% if error %}
+            <div class="alert alert-danger">{{ error }}</div>
+        {% endif %}
+
+        <h2>Orders</h2>
+        {% if orders %}
+            <ul class="list-group mb-4">
+                {% for order in orders %}
+                    <li class="list-group-item">{{ order }}</li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="alert alert-danger">No orders available.</p>
+        {% endif %}
+
+        <h2>Inventory</h2>
+        {% if inventory %}
+            <div class="row row-cols-1 row-cols-md-3 g-4">
+                {% for item in inventory %}
+                    <div class="col">
+                        <div class="card h-100 shadow-sm">
+                            <div class="card-header bg-primary text-white">
+                                {{ item.emoji }} {{ item.symbol }} {{ item.name }}
+                            </div>
+                            <div class="card-body">
+                                <p><strong>SKU:</strong> {{ item.sku }}</p>
+                               <p class="card-text"><strong>Quantity:</strong> {{ item.quantity }}</p>
+                        {% if item.quantity > 40 %}
+                            <span class="badge text-black">✅ In Stock</span>
+                        {% elif item.quantity > 10 %}
+                            <span class="badge text-black">⚠️ Low Stock</span>
+                        {% else %}
+                            <span class="badge text-black">❗ Critical</span>
+                        {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="text-muted">No inventory data available.</p>
+        {% endif %}
+    </div>
+</body>
+</html>
