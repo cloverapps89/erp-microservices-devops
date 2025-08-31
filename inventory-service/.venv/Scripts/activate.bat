@@ -8,7 +8,7 @@ if defined _OLD_CODEPAGE (
     "%SystemRoot%\System32\chcp.com" 65001 > nul
 )
 
-set VIRTUAL_ENV=C:\Users\mpadi\OneDrive\Desktop\devops\erp-microservices-devops\inventory-service\.venv
+set VIRTUAL_ENV=C:\Users\mpadi\devops\erp-microservices-devops\inventory-service\.venv
 
 if not defined PROMPT set PROMPT=$P$G
 
