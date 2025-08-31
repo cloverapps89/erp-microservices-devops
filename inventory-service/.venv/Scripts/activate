@@ -42,10 +42,10 @@ deactivate nondestructive
 if [ "$OSTYPE" = "cygwin" ] || [ "$OSTYPE" = "msys" ] ; then
     # transform D:\path\to\venv to /d/path/to/venv on MSYS
     # and to /cygdrive/d/path/to/venv on Cygwin
-    export VIRTUAL_ENV=$(cygpath "C:\Users\mpadi\OneDrive\Desktop\devops\erp-microservices-devops\inventory-service\.venv")
+    export VIRTUAL_ENV=$(cygpath "C:\Users\mpadi\devops\erp-microservices-devops\inventory-service\.venv")
 else
     # use the path as-is
-    export VIRTUAL_ENV="C:\Users\mpadi\OneDrive\Desktop\devops\erp-microservices-devops\inventory-service\.venv"
+    export VIRTUAL_ENV="C:\Users\mpadi\devops\erp-microservices-devops\inventory-service\.venv"
 fi
 
 _OLD_VIRTUAL_PATH="$PATH"
