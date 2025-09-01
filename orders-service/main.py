@@ -1,6 +1,7 @@
 import os
-from fastapi import FastAPI, Jinja2Templates
+from fastapi import FastAPI
 from contextlib import asynccontextmanager
+from fastapi.templating import Jinja2Templates
 from db import engine
 from models import Base
 from health import router as health_router
