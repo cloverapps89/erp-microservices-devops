@@ -1,11 +1,15 @@
+from pathlib import Path
+from fastapi.templating import Jinja2Templates
 from fastapi.testclient import TestClient
 from main import app
 import httpx
 
+
+
 client = TestClient(app)
 
 def test_get_orders_html():
-    response = client.get("/orders-with-inventory")
+    response = client.get("/orders/orders-with-inventory")
     assert response.status_code == 200
     assert "text/html" in response.headers.get("content-type", "")
 
@@ -28,7 +32,7 @@ def test_get_orders_with_inventory_json(monkeypatch):
     monkeypatch.setattr(httpx.AsyncClient, "get", mock_get)
 
     response = client.get(
-    "/orders-with-inventory?format=json",
+    "/orders/orders-with-inventory?format=json",
     headers={"Accept": "application/json"}
 )
 
