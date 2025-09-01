@@ -1,73 +1,92 @@
-from fastapi import FastAPI, Request          # 1) Bring in FastAPI framework
-import os                            # 2) We'll read an env var for the inventory URL (handy for Docker/Compose)
+import os
+from contextlib import asynccontextmanager
+from typing import AsyncGenerator
+
+from fastapi import FastAPI, Request, Depends
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
-import httpx                         # 3) HTTP client we'll use to call the inventory service
 
-app = FastAPI(title="Orders Service")  # 4) Create the app instance (Uvicorn will run this)
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
+from sqlalchemy.ext.asyncio import AsyncSession
 
+import httpx
+
+from db import engine, SessionLocal
+from models import Base, OrderItem
+from serializers import serialize_order
+
+# 🧩 Templating setup
 templates = Jinja2Templates(directory="templates")
 
-# 5) Where is the inventory service?  
-#    - During local dev (two terminals): it’s on http://127.0.0.1:8000
-#    - In Docker Compose: it will be http://inventory-service:8000
+# 🔗 External service URL
 INVENTORY_URL = os.getenv("INVENTORY_URL", "http://inventory-service:8000")
 
-@app.get("/orders")                   # 6) Simple endpoint: pretend these came from a DB
-def get_orders():
+# 🌱 App lifecycle
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield
 
-    #orders = ["Order1", "Order2", "Order3"]
-    orders = []
-    return {"orders": orders}
+# 🚀 FastAPI app
+app = FastAPI(lifespan=lifespan)
 
-@app.get("/orders-with-inventory", response_class=HTMLResponse)
-def get_orders_with_inventory(request: Request):
+# 🛠️ DB session dependency
+async def get_session() -> AsyncGenerator[AsyncSession, None]:
+    async with SessionLocal() as session:
+        yield session
+
+# 🔹 Fetch inventory from inventory-service
+async def fetch_inventory():
     try:
-        resp = httpx.get(f"{INVENTORY_URL}/api/inventory", timeout=5.0)
-        resp.raise_for_status()
-        inventory_data = resp.json()
-        inventory = inventory_data.get("inventory", [])
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(f"{INVENTORY_URL}/api/inventory")
+            resp.raise_for_status()
+            data = resp.json()
+            return data.get("inventory", []), None
     except httpx.HTTPStatusError as e:
-        return templates.TemplateResponse(request,"index.html", {
-            "error": f"Inventory responded with {e.response.status_code}",
-            "orders": [],
-            "inventory": []
-        })
+        return [], f"Inventory responded with {e.response.status_code}"
     except httpx.RequestError as e:
-        return templates.TemplateResponse(request,"index.html", {
-            "error": f"Could not reach inventory: {str(e)}",
-            "orders": [],
-            "inventory": []
-        })
+        return [], f"Could not reach inventory: {str(e)}"
 
-    orders = ["Order1", "Order2", "Order3"]
-    #orders = []
+# 🔹 HTML route
+@app.get("/orders-with-inventory", response_class=HTMLResponse)
+async def orders_with_inventory_html(request: Request, session: AsyncSession = Depends(get_session)):
+    inventory, error = await fetch_inventory()
 
-    return templates.TemplateResponse(request,"index.html", {
-        "orders": orders,
-        "inventory": inventory
+    result = await session.execute(
+        select(OrderItem).options(selectinload(OrderItem.customer))  # ✅ eager load
+    )
+    orders = result.scalars().all()
+    serialized_orders = [serialize_order(o) for o in orders]  # safe now
+
+    return templates.TemplateResponse("index.html", {
+        "request": request,
+        "orders": serialized_orders,
+        "inventory": inventory,
+        "error": error
     })
 
-@app.get("/api/orders-with-inventory", response_class=HTMLResponse)
-def get_orders_with_inventory(request: Request):
-    try:
-        resp = httpx.get(f"{INVENTORY_URL}/api/inventory", timeout=5.0)
-        resp.raise_for_status()
-        inventory = resp.json()
-    except httpx.HTTPStatusError as e:
-        return JSONResponse(content= {
-            "error": f"Inventory responded with {e.response.status_code}",
-            "orders": [],
-            "inventory": []
-        })
-    except httpx.RequestError as e:
-        return JSONResponse(content= {
-            "error": f"Could not reach inventory: {str(e)}",
+# 🔹 API route
+@app.get("/api/orders-with-inventory", response_class=JSONResponse)
+async def orders_with_inventory_api(session: AsyncSession = Depends(get_session)):
+    inventory, error = await fetch_inventory()
+
+    result = await session.execute(
+        select(OrderItem).options(selectinload(OrderItem.customer))  # ✅ eager load
+    )
+    orders = result.scalars().all()
+    serialized_orders = [serialize_order(o) for o in orders]
+
+    if error:
+        return JSONResponse(content={
+            "error": error,
             "orders": [],
             "inventory": []
         })
 
-    orders = ["Order1", "Order2", "Order3"]
-    #orders = []
-    print(inventory)
-    return JSONResponse(content={"orders": orders, "inventory": inventory})
+    return JSONResponse(content={
+        "orders": serialized_orders,
+        "inventory": inventory
+    })

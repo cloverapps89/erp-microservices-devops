@@ -98,6 +98,7 @@ async def get_inventory_json():
             "name": item.name,
             "sku": item.sku,
             "quantity": item.quantity,
+            "price" : item.price,
             "emoji": item.emoji
         }
         for item in items
