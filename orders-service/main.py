@@ -4,7 +4,7 @@ import json
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, List, Dict, Any
 
-from fastapi import FastAPI, Request, Depends, HTTPException, Query
+from fastapi import APIRouter, FastAPI, Request, Depends, HTTPException, Query
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 
@@ -18,9 +18,12 @@ from dotenv import load_dotenv
 from db import engine
 from models import Base, Customer, OrderItem, OrderInventoryLink
 
+from health import router as health_router
+
 # ---------------------------
 # Setup
 # ---------------------------
+
 templates = Jinja2Templates(directory="templates")
 load_dotenv()
 INVENTORY_URL = os.getenv("INVENTORY_URL")
@@ -41,7 +44,7 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(lifespan=lifespan)
-
+app.include_router(health_router)
 # ---------------------------
 # DB Session Dependency
 # ---------------------------

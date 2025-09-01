@@ -1,12 +1,13 @@
 import asyncio
+import os
 import random
 import string
 from datetime import datetime, timedelta, timezone
 import httpx
 
 # Public service URLs (adjust if running in Docker vs local)
-ORDERS_API = "http://127.0.0.1:8001/orders"
-INVENTORY_API = "http://127.0.0.1:8000/inventory"
+ORDERS_API = os.getenv("ORDERS_API", "http://localhost:8001/orders")
+INVENTORY_API = os.getenv("INVENTORY_API", "http://localhost:8000/inventory")
 
 # Base customer data to randomize from
 customer_data = [
@@ -109,7 +110,10 @@ async def seed_orders(n=10):
             print(f"❌ Failed to create order {order_number}: {e.response.text}")
 
 async def main():
-    await seed_orders(n=100)  # Number of orders to simulate
+    while True:
+        await seed_orders(n=5)  # Number of orders to simulate
+        print("✅ ORDER SUBMITTED")
+        await asyncio.sleep(10)
 
 if __name__ == "__main__":
     asyncio.run(main())
