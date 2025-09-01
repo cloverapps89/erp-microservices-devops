@@ -35,7 +35,7 @@ jobs:
           source .venv/bin/activate
           pip install -r requirements.txt
           pip install pytest
-          PYTHONPATH=. pytest tests
+          PYTHONPATH=. pytest inventory-service/tests
           deactivate
 
       # 🧪 Orders service tests
@@ -46,7 +46,7 @@ jobs:
           source .venv/bin/activate
           pip install -r requirements.txt
           pip install pytest
-          PYTHONPATH=. pytest tests
+          PYTHONPATH=. pytest orders-service/tests
           deactivate
 
       # 🛠️ Build Docker images
