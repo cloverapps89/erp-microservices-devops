@@ -5,32 +5,33 @@ import httpx
 client = TestClient(app)
 
 def test_get_orders_html():
-    response = client.get("/orders/orders-with-inventory")
+    # Fixed route path (no extra /orders)
+    response = client.get("/orders-with-inventory")
     assert response.status_code == 200
     assert "text/html" in response.headers.get("content-type", "")
 
 def test_get_orders_with_inventory_json(monkeypatch):
     # Mock the async inventory fetch
-    async def mock_get(self, url, **kwargs):  # Accept headers, timeout, etc.
+    async def mock_get(self, url, **kwargs):
         class MockResponse:
+            status_code = 200
             def raise_for_status(self): pass
             def json(self):
                 return {
-                        "inventory": [
-    {"sku": "APL", "name": "Apples", "quantity": 10, "price": 1.99, "emoji": "🍎"},
-    {"sku": "BAN", "name": "Bananas", "quantity": 20, "price": 0.99, "emoji": "🍌"},
-    {"sku": "ORG", "name": "Oranges", "quantity": 15, "price": 1.49, "emoji": "🍊"}
-]
-
+                    "inventory": [
+                        {"sku": "APL", "name": "Apples", "quantity": 10, "price": 1.99, "emoji": "🍎"},
+                        {"sku": "BAN", "name": "Bananas", "quantity": 20, "price": 0.99, "emoji": "🍌"},
+                        {"sku": "ORG", "name": "Oranges", "quantity": 15, "price": 1.49, "emoji": "🍊"}
+                    ]
                 }
         return MockResponse()
 
     monkeypatch.setattr(httpx.AsyncClient, "get", mock_get)
 
     response = client.get(
-    "/orders/orders-with-inventory?format=json",
-    headers={"Accept": "application/json"}
-)
+        "/orders-with-inventory?format=json",
+        headers={"Accept": "application/json"}
+    )
 
     assert response.status_code == 200
     assert "application/json" in response.headers.get("content-type", "")
