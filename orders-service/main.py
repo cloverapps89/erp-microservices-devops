@@ -24,7 +24,9 @@ from health import router as health_router
 # Setup
 # ---------------------------
 
-templates = Jinja2Templates(directory="templates")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
+
 load_dotenv()
 INVENTORY_URL = os.getenv("INVENTORY_URL")
 
