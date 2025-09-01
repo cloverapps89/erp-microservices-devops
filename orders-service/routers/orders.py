@@ -1,4 +1,5 @@
 import json
+import os
 from fastapi import APIRouter, Request, Depends, HTTPException, Query
 from fastapi.responses import RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
@@ -11,7 +12,8 @@ from models import Customer, OrderItem, OrderInventoryLink
 from sse import broadcast_event
 from inventory_client import fetch_inventory, validate_stock, decrement_inventory
 
-templates = Jinja2Templates(directory="templates")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
 router = APIRouter()
 
 
