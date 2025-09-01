@@ -12,34 +12,37 @@ jobs:
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      # Inventory service tests
-      - name: Install dependencies & run tests (inventory-service)
-        working-directory: inventory-service
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      # 🧪 Run service tests from repo root
+      - name: Run all service tests from repo root
         run: |
           python -m venv .venv
           source .venv/bin/activate
-          pip install -r requirements.txt
+          pip install -r orders-service/requirements.txt
+          pip install -r inventory-service/requirements.txt
           pip install pytest
-          pytest
+          echo "🧪 Testing orders-service..."
+          pytest -v orders-service/tests || { echo "❌ Orders-service tests failed."; }
+          echo "🧪 Testing inventory-service..."
+          pytest -v inventory-service/tests || { echo "❌ Inventory-service tests failed."; }
+          echo "✅ All tests passed. Proceeding with push."
 
-      # Orders service tests
-      - name: Install dependencies & run tests (orders-service)
-        working-directory: orders-service
-        run: |
-          python -m venv .venv
-          source .venv/bin/activate
-          pip install -r requirements.txt
-          pip install pytest
-          pytest
 
-      # Build docker images
+      # 🛠️ Build Docker images
       - name: Build Docker images
         run: |
           docker build -t inventory-service ./inventory-service

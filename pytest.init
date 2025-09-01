@@ -1,0 +1,6 @@
+# pytest.ini
+[pytest]
+testpaths =
+    inventory-service/tests
+    order-sender/tests
+addopts = -v
