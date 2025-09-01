@@ -8,5 +8,12 @@ DB_PATH = os.path.join(BASE_DIR, "order.db")
 
 engine = create_async_engine(f"sqlite+aiosqlite:///{DB_PATH}", connect_args={"check_same_thread": False})
 
-#engine = create_async_engine(DATABASE_URL, echo=True)
-SessionLocal = sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
+SessionLocal = sessionmaker(
+    bind=engine,
+    class_=AsyncSession,
+    expire_on_commit=False
+)
+
+async def get_session() -> AsyncSession:
+    async with SessionLocal() as session:
+        yield session
