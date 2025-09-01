@@ -27,15 +27,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      - name: Debug PYTHONPATH and test discovery
-        run: |
-          echo "Current directory: $(pwd)"
-          echo "PYTHONPATH=$PWD"
-          find . -name "test_*.py"
-          python -c "import sys; print(sys.path)"
-          PYTHONPATH=$PWD pytest -v
-
-
       # 🧪 Run service tests from repo root
       - name: Run orders-service tests
         run: |
