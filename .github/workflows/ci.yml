@@ -26,9 +26,8 @@ jobs:
           python -m venv .venv
           source .venv/bin/activate
           pip install -r requirements.txt
-          export PYTHONPATH=$(pwd)
           pip install pytest
-          pytest inventory-service/tests
+          PYTHONPATH=./inventory-service pytest inventory-service/tests
 
       # Orders service tests
       - name: Install dependencies & run tests (orders-service)
@@ -37,9 +36,8 @@ jobs:
           python -m venv .venv
           source .venv/bin/activate
           pip install -r requirements.txt
-          export PYTHONPATH=$(pwd)
           pip install pytest
-          pytest orders-service/tests
+          PYTHONPATH=./orders-service pytest orders-service/tests
 
       # Build docker images
       - name: Build Docker images
