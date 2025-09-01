@@ -28,14 +28,15 @@ jobs:
             ${{ runner.os }}-pip-
 
       # 🧪 Run service tests from repo root
-      - name: Run orders-service tests
+      - name: Run all service tests from repo root
         run: |
           python -m venv .venv
           source .venv/bin/activate
           pip install -r orders-service/requirements.txt
           pip install -r inventory-service/requirements.txt
           pip install pytest
-          PYTHONPATH=$PWD pytest
+          PYTHONPATH=$PWD pytest orders-service/tests inventory-service/tests
+
 
       # 🛠️ Build Docker images
       - name: Build Docker images
