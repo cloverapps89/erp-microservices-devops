@@ -23,10 +23,11 @@
                     </div>
                     <div class="card-body">
                         <p class="card-text"><strong>SKU:</strong> {{ item.sku }}</p>
+                        <p class="card-text"><strong>Price:</strong> ${{ item.price }}</p>
                         <p class="card-text"><strong>Quantity:</strong> {{ item.quantity }}</p>
                         {% if item.quantity > 40 %}
                             <span class="badge text-black">✅ In Stock</span>
-                        {% elif item.quantity > 10 %}
+                        {% elif item.quantity > 20 %}
                             <span class="badge text-black">⚠️ Low Stock</span>
                         {% else %}
                             <span class="badge text-black">❗ Critical</span>
