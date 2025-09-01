@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from db import engine, SessionLocal
 from models import Base, InventoryItem
+from health import router as health_router
 
 # ---------------------------
 # Lifespan
@@ -21,6 +22,7 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(lifespan=lifespan)
+app.include_router(health_router)
 templates = Jinja2Templates(directory="templates")
 
 # ---------------------------
