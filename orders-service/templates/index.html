@@ -1,88 +1,370 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Orders with Inventory</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <meta charset="UTF-8" />
+  <title>Live Orders & Inventory Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <style>
+    body { background: #f8f9fa; }
+    .highlight { animation: fadeHighlight 25s ease-out; background-color: #fff3cd !important; }
+    @keyframes fadeHighlight { 0% { background-color:#fff3cd } 100% { background-color:transparent } }
+    .scroll-panel { max-height: 80vh; overflow-y: auto; }
+    .stock-low { background-color:#f8d7da !important; }
+    .stock-medium { background-color:#fff3cd !important; }
+    .stock-high { background-color:#d1e7dd !important; }
+    .kpi-card h5 { font-size: 1.5rem; font-weight: bold; }
+
+    .kpi-flash {
+  background-color: #ffeeba;
+  transition: background-color 0.3s ease;
+  border-radius: 4px;
+  padding: 0.2em 0.5em;
+}
+
+  </style>
 </head>
-<body class="bg-light">
-    <div class="container py-4">
-        <h1 class="mb-4">📦 Orders with Inventory</h1>
+<body>
+  <div class="container-fluid py-4">
+    <div class="row g-4">
+      <!-- Orders Column -->
+      <div class="col-md-6">
+        <h2 class="mb-3">📦 Orders</h2>
 
-        {% if error %}
-            <div class="alert alert-danger">{{ error }}</div>
-        {% endif %}
+        <!-- Mini KPI Dashboard -->
+        <div class="card mb-3 shadow-sm kpi-card">
+          <div class="card-body d-flex justify-content-around text-center">
+            <div>
+              <h5 id="total-orders">{{ orders|length }}</h5>
+              <small class="text-muted">Total Orders</small>
+            </div>
+            <div>
+              <!-- Initialize via JS to avoid Jinja date/test pitfalls -->
+              <h5 id="orders-today">0</h5>
+              <small class="text-muted">Orders Today</small>
+            </div>
+            <div>
+              <h5 id="last-order-time">—</h5>
+              <small class="text-muted">Last Order</small>
+            </div>
+          </div>
+        </div>
 
-        <!-- Orders Section -->
-<h2 class="mb-3">Orders</h2>
-{% if orders %}
-    <div class="accordion mb-4" id="ordersAccordion">
-        {% for order in orders %}
-            <div class="accordion-item">
+        {% set highlight_skus = highlight_skus or [] %}
+
+        {% if orders %}
+          <div id="ordersAccordion" class="accordion scroll-panel">
+            {% for order in orders %}
+              <div
+                class="accordion-item {% if order['order_number'] in highlight_skus %}highlight{% endif %}"
+                data-created-at="{{ order['created_at'] }}"
+              >
                 <h2 class="accordion-header" id="heading{{ loop.index }}">
-                    <button class="accordion-button collapsed" type="button"
-                            data-bs-toggle="collapse"
-                            data-bs-target="#collapse{{ loop.index }}"
-                            aria-expanded="false"
-                            aria-controls="collapse{{ loop.index }}">
-                        Order #{{ order["order_number"] }} — {{ order["customer"] }} ({{ order["created_at"] }})
-                    </button>
+                  <button
+                    class="accordion-button collapsed"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#collapse{{ loop.index }}"
+                    aria-expanded="false"
+                    aria-controls="collapse{{ loop.index }}"
+                  >
+                    Order #{{ order["order_number"] }} — {{ order["customer"] }} ({{ order["created_at"] }})
+                  </button>
                 </h2>
-                <div id="collapse{{ loop.index }}" 
-                     class="accordion-collapse collapse"
-                     aria-labelledby="heading{{ loop.index }}"
-                     data-bs-parent="#ordersAccordion">
-                    <div class="accordion-body">
-                        {% if order["items"] %}
-                            <ul class="list-group">
-                                {% for item in order["items"] %}
-                                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                                        <span>{{ item.emoji }} {{ item.name }}</span>
-                                        <span class="badge bg-secondary">Qty: {{ item.quantity }}</span>
-                                        <span class="badge bg-success">${{ item.price }}</span>
-                                    </li>
-                                {% endfor %}
-                            </ul>
-                            <div class="mt-3 text-end">
-                                <strong>Total: ${{ order["items"] | sum(attribute="price") }}</strong>
-                            </div>
-                        {% else %}
-                            <p class="text-muted">No items in this order.</p>
-                        {% endif %}
-                    </div>
+                <div
+                  id="collapse{{ loop.index }}"
+                  class="accordion-collapse collapse"
+                  aria-labelledby="heading{{ loop.index }}"
+                  data-bs-parent="#ordersAccordion"
+                >
+                  <div class="accordion-body">
+                    {% if order["items"] %}
+                      <ul class="list-group">
+                        {% for item in order["items"] %}
+                          <li
+                            class="list-group-item d-flex justify-content-between align-items-center {% if item.sku in highlight_skus %}highlight{% endif %}"
+                          >
+                            <span>{{ item.emoji }} {{ item.name }}</span>
+                            <span class="badge bg-secondary">Qty: {{ item.quantity }}</span>
+                            <span class="badge bg-success">${{ item.price }}</span>
+                          </li>
+                        {% endfor %}
+                      </ul>
+                      <div class="mt-3 text-end">
+                        <strong>Total: ${{ order["items"] | sum(attribute="price") }}</strong>
+                      </div>
+                    {% else %}
+                      <p class="text-muted">No items in this order.</p>
+                    {% endif %}
+                  </div>
                 </div>
-            </div>
-        {% endfor %}
-    </div>
-{% else %}
-    <p class="alert alert-info">No orders yet! 🚀 Start by creating one from the API.</p>
-{% endif %}
-
-
-        <!-- Inventory Section -->
-        <h2 class="mb-3">Inventory</h2>
-        {% if inventory %}
-            <div class="row row-cols-1 row-cols-md-3 g-4">
-                {% for item in inventory %}
-                    <div class="col">
-                        <div class="card h-100 shadow-sm">
-                            <div class="card-header bg-primary text-white">
-                                {{ item.emoji }} {{ item.name }}
-                            </div>
-                            <div class="card-body">
-                                <p><strong>SKU:</strong> {{ item.sku }}</p>
-                                <p><strong>Stock:</strong> {{ item.quantity }}</p>
-                                <p><strong>Price:</strong> ${{ item.price }}</p>
-                            </div>
-                        </div>
-                    </div>
-                {% endfor %}
-            </div>
+              </div>
+            {% endfor %}
+          </div>
         {% else %}
-            <p class="alert alert-warning">No inventory items found. Add some products to get started!</p>
+          <p id="no-orders-alert" class="alert alert-info">
+            No orders yet! 🚀 Start by creating one from the API.
+          </p>
+          <div id="ordersAccordion" class="accordion scroll-panel"></div>
         {% endif %}
-    </div>
+      </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+      <!-- Inventory Column -->
+      <div class="col-md-6">
+        <h2 class="mb-3">📊 Inventory</h2>
+<!-- Mini KPI Dashboard for Inventory -->
+<div class="card mb-3 shadow-sm kpi-card">
+  <div class="card-body d-flex justify-content-around text-center">
+    <div>
+      <h5 id="total-skus">{{ inventory|length }}</h5>
+      <small class="text-muted">Total SKUs</small>
+    </div>
+    <div>
+      <h5 id="low-stock-count">0</h5>
+      <small class="text-muted">Low Stock (≤2)</small>
+    </div>
+    <div>
+      <h5 id="out-of-stock-count">0</h5>
+      <small class="text-muted">Out of Stock</small>
+    </div>
+    <div>
+      <h5 id="inventory-value">—</h5>
+      <small class="text-muted">Total Value</small>
+    </div>
+  </div>
+</div>
+        
+        {% if inventory %}
+          <div class="row row-cols-1 g-3 scroll-panel">
+            {% for item in inventory %}
+              {% set stock_class = 'stock-high' %}
+              {% if item.quantity <= 2 %}
+                {% set stock_class = 'stock-low' %}
+              {% elif item.quantity <= 5 %}
+                {% set stock_class = 'stock-medium' %}
+              {% endif %}
+              <div class="col">
+                <div class="card h-100 shadow-sm {{ stock_class }} {% if item.sku in highlight_skus %}highlight{% endif %}">
+                  <div class="card-header bg-primary text-white">
+                    {{ item.emoji }} {{ item.name }}
+                  </div>
+                  <div class="card-body">
+                    <p><strong>SKU:</strong> {{ item.sku }}</p>
+                    <p><strong>Stock:</strong> <span class="stock-value">{{ item.quantity }}</span></p>
+                    <p><strong>Price:</strong> ${{ item.price }}</p>
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="alert alert-warning">No inventory items found. Add some products to get started!</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS first to ensure its APIs are available to our script -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    // Utility: get YYYY-MM-DD from a Date or ISO string
+    function toYMD(input) {
+      const d = (input instanceof Date) ? input : new Date(input);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    // Initialize KPI "Orders Today" based on rendered orders' data-created-at
+    function initOrdersToday() {
+      const todayYMD = toYMD(new Date());
+      const items = document.querySelectorAll("#ordersAccordion .accordion-item");
+      let count = 0;
+      items.forEach(el => {
+        const created = el.getAttribute("data-created-at");
+        if (!created) return;
+        // Works whether created_at is YYYY-MM-DD or full ISO
+        if (toYMD(created) === todayYMD) count++;
+      });
+      const elToday = document.getElementById("orders-today");
+      if (elToday) elToday.textContent = count;
+      return count;
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+      // Set initial "Orders Today"
+      let ordersTodayCount = initOrdersToday();
+
+      // Parse initial total (fallback to 0 if missing)
+      const totalEl = document.getElementById("total-orders");
+      let totalOrdersCount = totalEl ? parseInt(totalEl.textContent, 10) || 0 : 0;
+
+      const evtSource = new EventSource("/orders/stream");
+
+      evtSource.onmessage = function (event) {
+        const data = JSON.parse(event.data);
+
+        // Update KPI: total orders
+        totalOrdersCount += 1;
+        if (totalEl) totalEl.textContent = totalOrdersCount;
+
+        // Update KPI: orders today
+        const orderDate = new Date(data.created_at);
+        const isToday = toYMD(orderDate) === toYMD(new Date());
+        if (isToday) {
+          ordersTodayCount += 1;
+          const elToday = document.getElementById("orders-today");
+          if (elToday) elToday.textContent = ordersTodayCount;
+        }
+
+        // Update KPI: last order time
+        const lastTimeEl = document.getElementById("last-order-time");
+        if (lastTimeEl) {
+          lastTimeEl.textContent = orderDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        }
+
+        // Prepend new order to accordion
+        const accordion = document.querySelector("#ordersAccordion");
+        if (accordion) {
+          const noOrdersAlert = document.querySelector("#no-orders-alert");
+          if (noOrdersAlert) noOrdersAlert.remove();
+
+          const idx = `order-${Date.now()}`;
+          const customerLabel =
+            (data.customer && (data.customer.nickname || data.customer.name)) ||
+            (typeof data.customer === "string" ? data.customer : "Customer");
+
+          const itemsHtml = Array.isArray(data.items) && data.items.length
+            ? `<ul class="list-group">` +
+              data.items.map(item => `
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                  <span>${item.emoji || ""} ${item.name || ""}</span>
+                  <span class="badge bg-secondary">Qty: ${item.quantity ?? ""}</span>
+                  <span class="badge bg-success">$${item.price ?? ""}</span>
+                </li>
+              `).join("") +
+              `</ul>`
+            : `<p class="text-muted">No items in this order.</p>`;
+
+          const wrapper = document.createElement("div");
+          wrapper.classList.add("accordion-item", "highlight");
+          wrapper.setAttribute("data-created-at", data.created_at || "");
+          wrapper.innerHTML = `
+            <h2 class="accordion-header" id="heading-${idx}">
+              <button class="accordion-button" type="button"
+                      data-bs-toggle="collapse"
+                      data-bs-target="#collapse-${idx}"
+                      aria-expanded="true"
+                      aria-controls="collapse-${idx}">
+                Order #${data.order_number ?? ""} — ${customerLabel} (${orderDate.toLocaleDateString()})
+              </button>
+            </h2>
+            <div id="collapse-${idx}"
+                 class="accordion-collapse collapse show"
+                 aria-labelledby="heading-${idx}"
+                 data-bs-parent="#ordersAccordion">
+              <div class="accordion-body">
+                ${itemsHtml}
+              </div>
+            </div>
+          `;
+
+          accordion.prepend(wrapper);
+
+          // Auto-collapse after 10s (only if Bootstrap Collapse API is present)
+          setTimeout(() => {
+            const collapseEl = document.querySelector(`#collapse-${idx}`);
+            if (collapseEl && window.bootstrap && window.bootstrap.Collapse) {
+              const inst = window.bootstrap.Collapse.getOrCreateInstance(collapseEl);
+              inst.hide();
+            }
+          }, 10000);
+        }
+
+        // Inventory live update + highlight
+        if (Array.isArray(data.items)) {
+          data.items.forEach(item => {
+            if (!item || !item.sku) return;
+            document.querySelectorAll(".card").forEach(card => {
+              if (card.textContent.includes(item.sku)) {
+                const stockElem = card.querySelector(".stock-value");
+                
+                if (stockElem && item.new_quantity !== undefined) {
+                  stockElem.textContent = item.new_quantity;
+                  const qty = parseInt(item.new_quantity, 10);
+                  card.classList.remove("stock-low", "stock-medium", "stock-high");
+                  if (qty <= 2) card.classList.add("stock-low");
+                  else if (qty <= 5) card.classList.add("stock-medium");
+                  else card.classList.add("stock-high");
+                }
+                card.classList.add("highlight");
+                updateInventoryKPIs();
+                setTimeout(() => card.classList.remove("highlight"), 25000);
+              }
+            });
+          });
+        }
+      };
+    });
+
+function updateInventoryKPIs() {
+  const items = document.querySelectorAll(".card .stock-value");
+  let lowStock = 0;
+  let outOfStock = 0;
+  let totalValue = 0;
+
+  items.forEach(el => {
+    const qty = parseInt(el.textContent, 10);
+    const card = el.closest(".card");
+
+    const paragraphs = card.querySelectorAll("p");
+    let price = 0;
+
+    paragraphs.forEach(p => {
+      if (p.textContent.includes("Price")) {
+        const match = p.textContent.match(/\$([\d.]+)/);
+        if (match) {
+          price = parseFloat(match[1]);
+        }
+      }
+    });
+
+    if (qty === 0) outOfStock++;
+    if (qty <= 2) lowStock++;
+    totalValue += qty * price;
+  });
+
+  flashUpdate("low-stock-count", lowStock);
+  flashUpdate("out-of-stock-count", outOfStock);
+  flashUpdate("inventory-value", `$${totalValue.toFixed(2)}`);
+}
+
+function flashUpdate(id, newValue) {
+  const el = document.getElementById(id);
+  if (el && el.textContent !== String(newValue)) {
+    el.textContent = newValue;
+    el.classList.add("kpi-flash");
+    setTimeout(() => el.classList.remove("kpi-flash"), 500);
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  updateInventoryKPIs();
+
+  const inventorySection = document.getElementById("inventory-section") || document.querySelector(".col-md-6 .row");
+  if (inventorySection) {
+    const observer = new MutationObserver(() => updateInventoryKPIs());
+    observer.observe(inventorySection, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+  }
+});
+
+
+  </script>
 </body>
 </html>

@@ -2,26 +2,13 @@ import asyncio
 import random
 import string
 from datetime import datetime, timedelta, timezone
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import sessionmaker
-from db import engine
-from models import Base, Customer, InventoryItem, OrderItem, OrderInventoryLink
+import httpx
 
-# 🧸 Emoji map by category
-emoji_map = {
-    "tools":       ["🔧", "🪛", "🔨", "⚙️", "🛠️"],
-    "electronics": ["💻", "📱", "🖥️", "🖨️", "🔋"],
-    "furniture":   ["🪑", "🛏️", "🛋️", "🗄️", "🚪"],
-    "toys":        ["🧸", "🎲", "🪀", "🎯", "🪁"],
-    "kitchen":     ["🍴", "🥄", "🧂", "🍳", "🫙"],
-    "sports":      ["⚽", "🏀", "🏈", "🎾", "🥏"],
-    "garden":      ["🌻", "🪴", "🌿", "🧤", "🪓"],
-    "clothing":    ["👕", "👖", "🧥", "👗", "🧢"],
-    "books":       ["📚", "📖", "📘", "📙", "📕"],
-    "pets":        ["🐶", "🐱", "🐹", "🐰", "🐦"],
-}
+# Public service URLs (adjust if running in Docker vs local)
+ORDERS_API = "http://127.0.0.1:8001/orders"
+INVENTORY_API = "http://127.0.0.1:8000/inventory"
 
-# 🧑 Customer map
+# Base customer data to randomize from
 customer_data = [
     {"name": "Alice Johnson",     "nickname": "AJ",     "email": "alice.j@example.com"},
     {"name": "Robert Smith",      "nickname": "Bobby",  "email": "robert.smith@example.com"},
@@ -35,84 +22,94 @@ customer_data = [
     {"name": "Jason Kim",         "nickname": "Jay",    "email": "jason.kim@example.com"},
 ]
 
-# 🔢 Helpers
-def generate_sku():
-    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+def random_suffix(length=5):
+    """Generate a short random suffix for uniqueness."""
+    return ''.join(random.choices(string.ascii_lowercase + string.digits, k=length))
+
+def random_customer():
+    """Pick a base customer and return randomized nickname/email."""
+    base = random.choice(customer_data)
+    suffix = random_suffix()
+    return {
+        "name": base["name"],  # not unique
+        "nickname": f"{base['nickname']}_{suffix}",  # unique
+        "email": f"{base['email'].split('@')[0]}_{suffix}@{base['email'].split('@')[1]}"  # unique
+    }
 
 def random_timestamp():
     now = datetime.now(timezone.utc)
-    delta = timedelta(days=random.randint(0, 365), hours=random.randint(0, 23))
+    delta = timedelta(days=random.randint(0, 30), hours=random.randint(0, 23))
     return now - delta
 
-# 🏗️ Generate inventory
-def generate_inventory(n=200):
-    items = []
-    categories = list(emoji_map.keys())
+async def fetch_inventory():
+    """Fetch live inventory from inventory-service."""
+    async with httpx.AsyncClient(timeout=5.0) as client:
+        resp = await client.get(INVENTORY_API, headers={"Accept": "application/json"})
+        resp.raise_for_status()
+        data = resp.json()
+        return data.get("inventory", [])
+
+async def create_order_via_api(order_payload):
+    """Send order to orders-service API."""
+    async with httpx.AsyncClient(timeout=5.0) as client:
+        resp = await client.post(
+            ORDERS_API,
+            json=order_payload,
+            headers={"Accept": "application/json"}
+        )
+        resp.raise_for_status()
+        return resp.json()
+
+async def seed_orders(n=10):
+    inventory = await fetch_inventory()
+    if not inventory:
+        print("❌ No inventory available — cannot seed orders.")
+        return
+
     for _ in range(n):
-        category = random.choice(categories)
-        emoji = random.choice(emoji_map[category])
-        item = InventoryItem(
-            name=f"{category.capitalize()} Item {random.randint(1, 999)}",
-            sku=generate_sku(),
-            quantity=random.randint(1, 500),
-            price=random.randint(100, 9999),
-            emoji=emoji
-        )
-        items.append(item)
-    return items
+        order_number = 1000 + random.randint(1, 9999)
+        cust = random_customer()
 
-# 👥 Generate customers
-def generate_customers(n=100):
-    customers = []
-    for i in range(n):
-        data = customer_data[i % len(customer_data)]
-        customer = Customer(
-            name=data["name"],
-            nickname=f"{data['nickname']}{i}",
-            email=f"{data['email'].split('@')[0]}{i}@{data['email'].split('@')[1]}"
-        )
-        customers.append(customer)
-    return customers
-
-# 🧾 Generate orders
-def generate_orders(customers, inventory, n=100):
-    orders = []
-    for i in range(n):
-        customer = random.choice(customers)
-        order = OrderItem(
-            order_number=1000 + i,
-            customer=customer,
-            created_at=random_timestamp()
-        )
+        # Pick 1–5 random items from inventory
         selected_items = random.sample(
-            inventory, 
-            k=min(len(inventory), random.randint(1, 5))
+            inventory,
+            k=min(len(inventory), random.randint(1, 20))
         )
+
+        # Build order payload
+        items_payload = []
         for item in selected_items:
-            link = OrderInventoryLink(
-                inventory=item,
-                quantity=random.randint(1, 3),
-                price_at_order=item.price
-            )
-            order.items.append(link)
-        orders.append(order)
-    return orders
+            qty = random.randint(1, 3)
+            # Skip if not enough stock
+            if item["quantity"] < qty:
+                continue
+            items_payload.append({
+                "sku": item["sku"],
+                "quantity": qty,
+                "price": item["price"]
+            })
 
-# 🚀 Async seed function
-async def seed():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        if not items_payload:
+            continue
 
-    async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-    async with async_session() as session:
-        inventory = generate_inventory()
-        customers = generate_customers()
-        orders = generate_orders(customers, inventory)
+        payload = {
+            "order_number": order_number,
+            "customer_name": cust["name"],
+            "customer_nickname": cust["nickname"],
+            "customer_email": cust["email"],
+            "items": items_payload
+        }
 
-        session.add_all(inventory + customers + orders)
-        await session.commit()
+        try:
+            result = await create_order_via_api(payload)
+            print(f"✅ Created order {order_number} for {cust['name']} ({cust['nickname']})")
+            print(f"   Updated stock: {result.get('updated_stock')}")
+            await asyncio.sleep(0.1) 
+        except httpx.HTTPStatusError as e:
+            print(f"❌ Failed to create order {order_number}: {e.response.text}")
 
-    print("✅ Seeded inventory, customers, and orders.")
+async def main():
+    await seed_orders(n=100)  # Number of orders to simulate
 
 if __name__ == "__main__":
-    asyncio.run(seed())
+    asyncio.run(main())
