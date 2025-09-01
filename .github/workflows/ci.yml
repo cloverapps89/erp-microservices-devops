@@ -12,34 +12,44 @@ jobs:
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      # Inventory service tests
-      - name: Install dependencies & run tests (inventory-service)
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      # 🧪 Inventory service tests
+      - name: Run inventory-service tests
         working-directory: inventory-service
         run: |
           python -m venv .venv
           source .venv/bin/activate
           pip install -r requirements.txt
           pip install pytest
-          PYTHONPATH=./inventory-service pytest inventory-service/tests
+          PYTHONPATH=. pytest tests
+          deactivate
 
-      # Orders service tests
-      - name: Install dependencies & run tests (orders-service)
+      # 🧪 Orders service tests
+      - name: Run orders-service tests
         working-directory: orders-service
         run: |
           python -m venv .venv
           source .venv/bin/activate
           pip install -r requirements.txt
           pip install pytest
-          PYTHONPATH=./orders-service pytest orders-service/tests
+          PYTHONPATH=. pytest tests
+          deactivate
 
-      # Build docker images
+      # 🛠️ Build Docker images
       - name: Build Docker images
         run: |
           docker build -t inventory-service ./inventory-service
