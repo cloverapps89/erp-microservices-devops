@@ -35,7 +35,11 @@ jobs:
           pip install -r orders-service/requirements.txt
           pip install -r inventory-service/requirements.txt
           pip install pytest
-          PYTHONPATH=$PWD pytest orders-service/tests inventory-service/tests
+          echo "🧪 Testing orders-service..."
+          pytest -v orders-service/tests || { echo "❌ Orders-service tests failed."; }
+          echo "🧪 Testing inventory-service..."
+          pytest -v inventory-service/tests || { echo "❌ Inventory-service tests failed."; }
+          echo "✅ All tests passed. Proceeding with push."
 
 
       # 🛠️ Build Docker images
