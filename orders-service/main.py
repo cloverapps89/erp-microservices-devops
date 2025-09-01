@@ -1,13 +1,14 @@
-from fastapi import FastAPI
+import os
+from fastapi import FastAPI, Jinja2Templates
 from contextlib import asynccontextmanager
-
 from db import engine
 from models import Base
 from health import router as health_router
 from routers import orders
 from sse import router as sse_router
 
-
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
 # ---------------------------
 # Lifespan
 # ---------------------------
