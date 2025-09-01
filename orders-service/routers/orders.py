@@ -12,8 +12,12 @@ from models import Customer, OrderItem, OrderInventoryLink
 from sse import broadcast_event
 from inventory_client import fetch_inventory, validate_stock, decrement_inventory
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+TEMPLATES_DIR = PROJECT_ROOT  / "templates"
+templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+
 router = APIRouter()
 
 
