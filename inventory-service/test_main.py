@@ -9,9 +9,10 @@ def test_index():
     assert "Mike's Mystery Machine" in response.text
 
 def test_inventory():
-    response = client.get("/inventory")
+    response = client.get("/inventory", headers={"accept": "application/json"})
     assert response.status_code == 200
     data = response.json()
     assert "inventory" in data
     assert isinstance(data["inventory"], list)
+
 
