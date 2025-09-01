@@ -9,7 +9,7 @@ def test_index():
     assert "Mike's Mystery Machine" in response.text
 
 def test_inventory():
-    response = client.get("/api/inventory")
+    response = client.get("/inventory")
     assert response.status_code == 200
     data = response.json()
     assert "inventory" in data
