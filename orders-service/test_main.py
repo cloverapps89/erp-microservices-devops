@@ -22,7 +22,7 @@ def test_get_orders_with_inventory(monkeypatch):
 
     monkeypatch.setattr(httpx.AsyncClient, "get", mock_get)
 
-    response = client.get("/api/orders-with-inventory")
+    response = client.get("/orders-with-inventory")
     assert response.status_code == 200
     data = response.json()
 
