@@ -27,25 +27,15 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      # 🧪 Inventory service tests
-      - name: Run inventory-service tests
-        run: |
-          python -m venv inventory-service/.venv
-          source inventory-service/.venv/bin/activate
-          pip install -r inventory-service/requirements.txt
-          pip install pytest
-          PYTHONPATH=. pytest inventory-service/tests
-          deactivate
-
-      # 🧪 Orders service tests
+      # 🧪 Run service tests from repo root
       - name: Run orders-service tests
         run: |
-          python -m venv orders-service/.venv
-          source orders-service/.venv/bin/activate
+          python -m venv .venv
+          source .venv/bin/activate
           pip install -r orders-service/requirements.txt
+          pip install -r inventory-service/requirements.txt
           pip install pytest
-          PYTHONPATH=. pytest orders-service/tests
-          deactivate
+          PYTHONPATH=$PWD pytest
 
       # 🛠️ Build Docker images
       - name: Build Docker images
