@@ -29,22 +29,20 @@ jobs:
 
       # 🧪 Inventory service tests
       - name: Run inventory-service tests
-        working-directory: inventory-service
         run: |
-          python -m venv .venv
-          source .venv/bin/activate
-          pip install -r requirements.txt
+          python -m venv inventory-service/.venv
+          source inventory-service/.venv/bin/activate
+          pip install -r inventory-service/requirements.txt
           pip install pytest
           PYTHONPATH=. pytest inventory-service/tests
           deactivate
 
       # 🧪 Orders service tests
       - name: Run orders-service tests
-        working-directory: orders-service
         run: |
-          python -m venv .venv
-          source .venv/bin/activate
-          pip install -r requirements.txt
+          python -m venv orders-service/.venv
+          source orders-service/.venv/bin/activate
+          pip install -r orders-service/requirements.txt
           pip install pytest
           PYTHONPATH=. pytest orders-service/tests
           deactivate
