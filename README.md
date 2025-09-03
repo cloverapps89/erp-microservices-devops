@@ -7,9 +7,9 @@ It demonstrates DevOps practices including CI/CD pipelines, containerization, or
 ## 🏗️ Tech Stack
 - **Languages:** Python (FastAPI), Java (Spring Boot)
 - **Containerization:** Docker, Docker Compose
-- **Orchestration:** Kubernetes (Minikube, AWS EKS)
+- **Orchestration:** Kubernetes (Minikube, AKS)
 - **CI/CD:** GitHub Actions
-- **Cloud:** AWS (Free Tier – EC2, S3, Route 53)
+- **Cloud:** AKS (Free Tier Azure Virtual Machines, Azure Blob Storage, Azure Traffic Manager)
 - **Infrastructure as Code:** Terraform
 - **Monitoring:** Prometheus, Grafana
 - **Other Tools:** Git, GitHub Container Registry
