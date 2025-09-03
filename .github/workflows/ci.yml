@@ -11,15 +11,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: 🧾 Checkout repo
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: 🐍 Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      - name: Cache pip packages
+      - name: 📦 Cache pip packages
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
@@ -27,23 +27,29 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      # 🧪 Run service tests from repo root
-      - name: Run all service tests from repo root
+      - name: 🐳 Start services with Docker Compose
+        run: docker-compose up -d --build
+
+      - name: ⏳ Wait for services to be healthy
+        run: |
+          echo "Waiting for inventory-service..."
+          until curl -s http://localhost:8000/health; do sleep 2; done
+          echo "Waiting for orders-service..."
+          until curl -s http://localhost:8001/health; do sleep 2; done
+          echo "✅ All services are healthy."
+
+      - name: 🧪 Run integration tests
         run: |
           python -m venv .venv
           source .venv/bin/activate
-          pip install -r orders-service/requirements.txt
           pip install -r inventory-service/requirements.txt
-          pip install pytest
-          echo "🧪 Testing orders-service..."
-          pytest -v orders-service/tests || { echo "❌ Orders-service tests failed."; }
-          echo "🧪 Testing inventory-service..."
-          pytest -v inventory-service/tests || { echo "❌ Inventory-service tests failed."; }
-          echo "✅ All tests passed. Proceeding with push."
+          pip install -r orders-service/requirements.txt
+          pip install pytest requests
+          echo "Testing inventory-service..."
+          pytest -v inventory-service/tests/integration
+          echo "Testing orders-service..."
+          pytest -v orders-service/tests/integration
 
-
-      # 🛠️ Build Docker images
-      - name: Build Docker images
-        run: |
-          docker build -t inventory-service ./inventory-service
-          docker build -t orders-service ./orders-service
+      - name: 🧹 Tear down services
+        if: always()
+        run: docker-compose down
