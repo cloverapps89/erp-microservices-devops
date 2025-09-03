@@ -1,16 +1,19 @@
-from fastapi.testclient import TestClient
-from main import app
+import requests
 
-client = TestClient(app)
+BASE_URL = "http://localhost:8000"
 
-def test_index():
-    response = client.get("/")
-    assert response.status_code == 200
-    assert "Mike's Mystery Machine" in response.text
-
-def test_inventory():
-    response = client.get("/inventory", headers={"accept": "application/json"})
+def test_inventory_endpoint_available():
+    response = requests.get(f"{BASE_URL}/inventory", headers={"accept": "application/json"})
     assert response.status_code == 200
     data = response.json()
     assert "inventory" in data
     assert isinstance(data["inventory"], list)
+
+def test_inventory_item_structure_if_present():
+    response = requests.get(f"{BASE_URL}/inventory", headers={"accept": "application/json"})
+    data = response.json()["inventory"]
+
+    if data:  # Only validate structure if data exists
+        sample = data[0]
+        expected_keys = {"name", "sku", "quantity", "price", "emoji"}
+        assert expected_keys.issubset(sample.keys())

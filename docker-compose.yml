@@ -7,10 +7,12 @@ services:
     container_name: inventory-service
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
     volumes:
-      - ./inventory-service:/app
+      - inventory_data:/data         # new named volume for DB
+      - ./inventory-service:/app     # still mount code, but DB is separate
     ports:
       - "8000:8000"
     environment:
+      - DATABASE_URL=sqlite+aiosqlite:////data/inventory.db   # tell FastAPI where to store DB
       - INVENTORY_URL=http://inventory-service:8000
       - ORDERS_URL=http://orders-service:8001
       - PUBLIC_INVENTORY_URL=http://127.0.0.1:8000
@@ -27,10 +29,12 @@ services:
     container_name: orders-service
     command: uvicorn main:app --host 0.0.0.0 --port 8001 --reload
     volumes:
-      - ./orders-service:/app
+      - orders_data:/data         # new named volume for DB
+      - ./orders-service:/app     # still mount code, but DB is separate
     ports:
       - "8001:8001"
     environment:
+      - DATABASE_URL=sqlite+aiosqlite:////data/orders.db
       - INVENTORY_URL=http://inventory-service:8000
       - PUBLIC_INVENTORY_URL=http://127.0.0.1:8000
       - PUBLIC_ORDERS_URL=http://127.0.0.1:8001
@@ -56,3 +60,6 @@ services:
     environment:
       - ORDERS_API=http://orders-service:8001/orders
       - INVENTORY_API=http://inventory-service:8000/inventory
+volumes:
+  inventory_data:
+  orders_data:
