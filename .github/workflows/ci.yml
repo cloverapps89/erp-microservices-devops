@@ -53,9 +53,9 @@ jobs:
           pip install -r orders-service/requirements.txt
           pip install pytest requests
           echo "Testing inventory-service..."
-          pytest -v inventory-service/tests/integration
+          pytest -v inventory-service/tests
           echo "Testing orders-service..."
-          pytest -v orders-service/tests/integration
+          pytest -v orders-service/tests
 
       - name: 🧹 Tear down services
         if: always()
