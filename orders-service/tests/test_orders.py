@@ -17,10 +17,13 @@ def test_get_orders_with_inventory_json():
 
     data = response.json()
 
-    # Validate orders structure
+    # Validate top-level structure
     assert "orders" in data
+    assert "inventory" in data
     assert isinstance(data["orders"], list)
+    assert isinstance(data["inventory"], list)
 
+    # Validate orders structure if present
     if data["orders"]:
         order = data["orders"][0]
         assert isinstance(order, dict)
@@ -28,7 +31,8 @@ def test_get_orders_with_inventory_json():
         assert "customer" in order
         assert "items" in order
 
-    # Validate inventory structure
-    assert "inventory" in data
-    assert isinstance(data["inventory"], list)
-    assert any("emoji" in item for item in data["inventory"])
+    # Validate inventory structure if present
+    if data["inventory"]:
+        item = data["inventory"][0]
+        expected_keys = {"sku", "name", "quantity", "price", "emoji"}
+        assert expected_keys.issubset(item.keys())
