@@ -19,7 +19,7 @@ It demonstrates DevOps practices including CI/CD pipelines, containerization, or
 - Containerization with Docker
 - CI/CD pipelines (GitHub Actions)
 - Kubernetes deployments
-- AWS provisioning (Terraform)
+- AzureRM provisioning (Terraform)
 - Monitoring & observability
 - Secrets management & security
 
