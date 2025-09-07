@@ -3,8 +3,7 @@
 ![Build Status](https://github.com/cloverapps89/erp-microservices-devops/actions/workflows/terraform.yml/badge.svg)
 ![Python](https://img.shields.io/badge/python-3.12-blue)
 ![License](https://img.shields.io/github/license/cloverapps89/erp-microservices-devops)
-![Coverage](https://img.shields.io/badge/coverage-92%25-brightgreen)
-
+![Coverage](https://codecov.io/gh/cloverapps89/erp-microservices-devops/branch/main/graph/badge.svg)
 
 ## 📌 Overview
 This project simulates a small ERP-style platform built with microservices.  

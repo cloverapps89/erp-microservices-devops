@@ -51,9 +51,18 @@ jobs:
           source .venv/bin/activate
           pip install -r inventory-service/requirements.txt
           pip install -r orders-service/requirements.txt
-          pip install pytest requests
+          pip install pytest requests pytest-cov
+          pytest --cov=. --cov-report=xml
           echo "🧪 Waiting for test-runner to finish..."
           docker logs -f test-runner || { echo "❌ Tests failed inside test-runner."; exit 1; }
+
+      - name: 📤 Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage.xml
+          flags: unittests
+          name: codecov-coverage
+
 
       - name: 🧹 Tear down services
         if: always()

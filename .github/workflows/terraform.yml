@@ -47,10 +47,10 @@ jobs:
 
       - name: 🔐 Capture Secret (optional)
         run: |
-            SECRET=$(terraform -chdir=terraform output -raw generated_secret || echo "")
-            if [ -z "$SECRET" ]; then
-                echo "⚠️ No secret found. Skipping export."
+            if [ -z "$APP_SECRET" ]; then
+                echo "❌ APP_SECRET is not set"
             else
-                echo "APP_SECRET=$SECRET" >> $GITHUB_ENV
+                echo "✅ APP_SECRET is available"
             fi
+
 
