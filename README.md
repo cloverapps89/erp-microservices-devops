@@ -1,5 +1,6 @@
 # ERP Microservices DevOps Project
-![Build Status](https://github.com/cloverapps89/erp-microservices-devops/actions/workflows/build-and-test.yml/badge.svg)
+![Build Status](https://github.com/cloverapps89/erp-microservices-devops/actions/workflows/ci.yml/badge.svg)
+![Build Status](https://github.com/cloverapps89/erp-microservices-devops/actions/workflows/terraform.yml/badge.svg)
 ![Python](https://img.shields.io/badge/python-3.12-blue)
 ![License](https://img.shields.io/github/license/cloverapps89/erp-microservices-devops)
 ![Coverage](https://img.shields.io/badge/coverage-92%25-brightgreen)
