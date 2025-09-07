@@ -47,7 +47,7 @@ jobs:
 
       - name: 🔐 Export APP_SECRET
         run: |
-          SECRET=$(terraform -chdir=terraform output -raw generated_secret || echo "")
+          SECRET=$(terraform -chdir=terraform output -raw app_secret || echo "")
             if [ -z "$SECRET" ]; then
               echo "⚠️ No secret found. Skipping export."
             else
