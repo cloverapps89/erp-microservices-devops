@@ -52,10 +52,8 @@ jobs:
           pip install -r inventory-service/requirements.txt
           pip install -r orders-service/requirements.txt
           pip install pytest requests
-          echo "Testing inventory-service..."
-          pytest -v inventory-service/tests
-          echo "Testing orders-service..."
-          pytest -v orders-service/tests
+          echo "🧪 Waiting for test-runner to finish..."
+          docker logs -f test-runner || { echo "❌ Tests failed inside test-runner."; exit 1; }
 
       - name: 🧹 Tear down services
         if: always()

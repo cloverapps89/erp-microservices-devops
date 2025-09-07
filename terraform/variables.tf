@@ -1,5 +1,7 @@
-variable "location" {
-  description = "Azure location"
-  type        = string
-  default     = "eastus"
-}
+# variable "location" {
+#   description = "Azure location"
+#   type        = string
+#   default     = "eastus"
+# }
+
+
