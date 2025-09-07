@@ -15,8 +15,3 @@ output "app_secret" {
 output "pet_names" {
   value = [for pet in random_pet.demo : pet.id]
 }
-
-output "generated_secret" {
-  value     = random_password.app_secret.result
-  sensitive = true
-}
