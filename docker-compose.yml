@@ -78,11 +78,11 @@ services:
         source .venv/bin/activate &&
         pip install -r /inventory-service/requirements.txt &&
         pip install -r /orders-service/requirements.txt &&
-        pip install pytest requests &&
+        pip install pytest requests pytest-cov &&
         echo '🧪 Testing inventory-service...' &&
-        pytest -v /inventory-service/tests &&
+        pytest --cov=/inventory-service --cov-report=xml -v /inventory-service/tests &&
         echo '🧪 Testing orders-service...' &&
-        pytest -v /orders-service/tests
+        pytest --cov=/orders-service --cov-report=xml -v /orders-service/tests 
       "
 volumes:
   inventory_data:
