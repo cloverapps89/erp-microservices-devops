@@ -60,6 +60,31 @@ services:
     environment:
       - ORDERS_API=http://orders-service:8001/orders
       - INVENTORY_API=http://inventory-service:8000/inventory
+
+  test-runner:
+    image: python:3.11
+    container_name: test-runner
+    depends_on:
+      orders-service:
+        condition: service_healthy
+      inventory-service:
+        condition: service_healthy
+    volumes:
+      - ./inventory-service:/inventory-service
+      - ./orders-service:/orders-service
+    working_dir: /app
+    command: >
+      bash -c "
+        python -m venv .venv &&
+        source .venv/bin/activate &&
+        pip install -r /inventory-service/requirements.txt &&
+        pip install -r /orders-service/requirements.txt &&
+        pip install pytest requests &&
+        echo '🧪 Testing inventory-service...' &&
+        pytest -v /inventory-service/tests &&
+        echo '🧪 Testing orders-service...' &&
+        pytest -v /orders-service/tests
+      "
 volumes:
   inventory_data:
   orders_data:

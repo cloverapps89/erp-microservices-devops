@@ -1,5 +1,11 @@
-variable "location" {
-  description = "Azure location"
+# variable "location" {
+#   description = "Azure location"
+#   type        = string
+#   default     = "eastus"
+# }
+
+variable "app_secret" {
+  description = "Simulated secret for the app"
   type        = string
-  default     = "eastus"
+  sensitive   = true
 }
