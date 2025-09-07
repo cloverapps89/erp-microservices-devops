@@ -31,7 +31,7 @@ jobs:
         run: terraform -chdir=terraform validate
 
       - name: 📐 Terraform Plan
-        run: terraform -chdir=terraform plan -var="app_secret=${{ secrets.APP_SECRET }}"
+        run: terraform -chdir=terraform plan
         # env:
         #   ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
         #   ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
@@ -39,7 +39,7 @@ jobs:
         #   ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
      
       - name: 🚀 Terraform Apply
-        run: terraform -chdir=terraform apply -auto-approve -var="app_secret=${{ secrets.APP_SECRET }}"
+        run: terraform -chdir=terraform apply -auto-approve 
  
     
       - name: 📤 Show Terraform Outputs
