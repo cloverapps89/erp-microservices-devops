@@ -3,7 +3,7 @@ import time
 
 BASE_URL = "http://inventory-service:8000"
 
-def wait_for_service(url, timeout=60):
+def wait_for_service(url, timeout=30):
     for _ in range(timeout):
         try:
             r = requests.get(url)
@@ -14,6 +14,10 @@ def wait_for_service(url, timeout=60):
     raise Exception(f"Service at {url} not available after {timeout} seconds")
 
 wait_for_service(f"{BASE_URL}/health")
+
+def test_inventory_root_available():
+    response = requests.get(f"{BASE_URL}/", headers={"accept": "application/json"})
+    assert response.status_code == 200
 
 def test_inventory_endpoint_available():
     response = requests.get(f"{BASE_URL}/inventory", headers={"accept": "application/json"})

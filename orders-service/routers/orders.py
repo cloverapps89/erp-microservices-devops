@@ -1,7 +1,7 @@
 import json
 import os
 from fastapi import APIRouter, Request, Depends, HTTPException, Query
-from fastapi.responses import RedirectResponse, JSONResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -20,6 +20,18 @@ templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 router = APIRouter()
 
+# Check root
+ORDERS_URL = os.getenv("ORDERS_URL", "http://orders-service:8001")
+
+@router.get("", response_class=HTMLResponse)
+def index(request: Request):
+    """Landing page for orders + inventory."""
+    return templates.TemplateResponse(
+        "index.html",
+        {
+            "request": request
+        }
+    )
 
 @router.post("")
 async def create_order(request: Request, session: AsyncSession = Depends(get_session)):
