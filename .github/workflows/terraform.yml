@@ -37,7 +37,11 @@ jobs:
         #   ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
         #   ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         #   ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-
+     
+      - name: 🚀 Terraform Apply
+        run: terraform -chdir=terraform apply -auto-approve -var="app_secret=${{ secrets.APP_SECRET }}"
+ 
+    
       - name: 📤 Show Terraform Outputs
         run: terraform output pet_names
 
