@@ -45,12 +45,22 @@ jobs:
       - name: 📤 Show Terraform Outputs
         run: terraform -chdir=terraform output pet_names
 
-      - name: 🔐 Capture Secret (optional)
+      - name: 🔐 Export APP_SECRET
+        run: |
+          SECRET=$(terraform -chdir=terraform output -raw generated_secret || echo "")
+            if [ -z "$SECRET" ]; then
+              echo "⚠️ No secret found. Skipping export."
+            else
+              echo "APP_SECRET=$SECRET" >> $GITHUB_ENV
+            fi
+
+      - name: ✅ Confirm APP_SECRET is available
         run: |
             if [ -z "$APP_SECRET" ]; then
-                echo "❌ APP_SECRET is not set"
+              echo "❌ APP_SECRET is not set"
             else
-                echo "✅ APP_SECRET is available"
+              echo "✅ APP_SECRET is available"
             fi
+
 
 
