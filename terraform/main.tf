@@ -17,7 +17,7 @@
 
 #Setup infra
 resource "random_pet" "demo" {
-  count = 2
+  count     = 2
   length    = 2
   separator = "*"
 }
