@@ -43,7 +43,7 @@ jobs:
  
     
       - name: 📤 Show Terraform Outputs
-        run: terraform output pet_names
+        run: terraform -chdir=terraform output pet_names
 
       - name: 🔐 Capture Secret (optional)
         run: |
