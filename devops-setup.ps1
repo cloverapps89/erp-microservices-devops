@@ -49,8 +49,8 @@ if (Get-Command docker -ErrorAction SilentlyContinue) {
     try {
         docker run --rm hello-world > $null
 		cd .\erp-microservices-devops
-		docker-compose up --build test-runner
-		docker-compose down 
+		docker compose up --build test-runner
+		docker compose down 
         Write-Host "🐳 Docker is working ✅" -ForegroundColor Green
     } catch {
         Write-Host "Docker installed but test failed. Make sure Docker Desktop is running." -ForegroundColor Yellow
