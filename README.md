@@ -1,11 +1,9 @@
 # ERP Microservices DevOps Project
 ![Main Build](https://github.com/cloverapps89/erp-microservices-devops/actions/workflows/ci.yml/badge.svg?branch=main)
 ![Main Build](https://github.com/cloverapps89/erp-microservices-devops/actions/workflows/terraform.yml/badge.svg?branch=main)
-![Dev Build](https://github.com/cloverapps89/erp-microservices-devops/actions/workflows/ci.yml/badge.svg?branch=dev)
-![Dev Build](https://github.com/cloverapps89/erp-microservices-devops/actions/workflows/terraform.yml/badge.svg?branch=dev)
 ![Python](https://img.shields.io/badge/python-3.12-blue)
 ![License](https://img.shields.io/github/license/cloverapps89/erp-microservices-devops)
-![Coverage](https://codecov.io/gh/cloverapps89/erp-microservices-devops/branch/main/graph/badge.svg)
+[![codecov](https://codecov.io/github/cloverapps89/erp-microservices-devops/graph/badge.svg)](https://codecov.io/github/cloverapps89/erp-microservices-devops)
 
 ## 📌 Overview
 This project simulates a small ERP-style platform built with microservices.  
