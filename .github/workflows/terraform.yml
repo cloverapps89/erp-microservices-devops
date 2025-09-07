@@ -10,13 +10,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: 🧾 Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Terraform
+      - name: ⚙️ Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
-      - name: Terraform Init
+      - name: 🧱 Terraform Init
         run: terraform -chdir=terraform init
         # env:
         #   ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
@@ -24,16 +24,22 @@ jobs:
         #   ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         #   ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
 
-      - name: Terraform Format
+      - name: 🧹 Terraform Format Check
         run: terraform -chdir=terraform fmt -check
 
-      - name: Terraform Validate
+      - name: 🔍 Terraform Validate
         run: terraform -chdir=terraform validate
 
-      - name: Terraform Plan
+      - name: 📐 Terraform Plan
         run: terraform -chdir=terraform plan -var="app_secret=${{ secrets.APP_SECRET }}"
         # env:
         #   ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
         #   ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
         #   ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         #   ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+
+      - name: 📤 Show Terraform Outputs
+        run: terraform output pet_names
+
+      - name: 🔐 Capture Secret (optional)
+        run: echo "APP_SECRET=$(terraform output -raw generated_secret)" >> $GITHUB_ENV

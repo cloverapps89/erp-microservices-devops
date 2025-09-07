@@ -17,21 +17,13 @@
 
 #Setup infra
 resource "random_pet" "demo" {
+  count = 2
   length    = 2
   separator = "*"
-}
-
-output "pet_name" {
-  value = random_pet.demo.id
 }
 
 #Setup secrets 
 resource "random_password" "app_secret" {
   length  = 16
   special = true
-}
-
-output "generated_secret" {
-  value     = random_password.app_secret.result
-  sensitive = true
 }
