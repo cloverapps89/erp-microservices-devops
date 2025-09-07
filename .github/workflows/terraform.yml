@@ -46,4 +46,11 @@ jobs:
         run: terraform output pet_names
 
       - name: 🔐 Capture Secret (optional)
-        run: echo "APP_SECRET=$(terraform output -raw generated_secret)" >> $GITHUB_ENV
+        run: |
+            SECRET=$(terraform -chdir=terraform output -raw generated_secret || echo "")
+            if [ -z "$SECRET" ]; then
+                echo "⚠️ No secret found. Skipping export."
+            else
+                echo "APP_SECRET=$SECRET" >> $GITHUB_ENV
+            fi
+
