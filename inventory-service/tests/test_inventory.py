@@ -3,7 +3,7 @@ import time
 
 BASE_URL = "http://inventory-service:8000"
 
-def wait_for_service(url, timeout=30):
+def wait_for_service(url, timeout=60):
     for _ in range(timeout):
         try:
             r = requests.get(url)
