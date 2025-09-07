@@ -51,6 +51,7 @@ jobs:
             if [ -z "$SECRET" ]; then
               echo "⚠️ No secret found. Skipping export."
             else
+              echo "🔐 Secret found..."
               echo "APP_SECRET=$SECRET" >> $GITHUB_ENV
             fi
 
