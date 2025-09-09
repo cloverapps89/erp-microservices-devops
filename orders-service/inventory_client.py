@@ -1,9 +1,10 @@
+import asyncio
 import httpx
 import os
 from fastapi import HTTPException
 from typing import List, Dict, Any
 
-INVENTORY_URL = os.getenv("INVENTORY_URL", "http://inventory-service:8000")
+INVENTORY_URL = os.getenv("INVENTORY_URL", "http://inventory-service:8001")
 
 
 async def fetch_inventory():
@@ -41,8 +42,9 @@ async def decrement_inventory(items: List[Dict[str, Any]]) -> Dict[str, int]:
     updated_stock = {}
     async with httpx.AsyncClient(timeout=5.0) as client:
         for link in items:
+            #asyncio.sleep(1)
             resp = await client.patch(
-                f"{INVENTORY_URL}/api/inventory/{link['sku']}",
+                f"{INVENTORY_URL}/inventory/api/inventory/{link['sku']}",
                 params={"quantity_delta": -link["quantity"]}
             )
             if resp.status_code != 200:
@@ -52,4 +54,6 @@ async def decrement_inventory(items: List[Dict[str, Any]]) -> Dict[str, int]:
                 )
             data = resp.json()
             updated_stock[data["sku"]] = data["new_quantity"]
+            
+            
     return updated_stock

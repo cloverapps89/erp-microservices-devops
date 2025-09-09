@@ -4,9 +4,9 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 
 
 # Use env var or fallback
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///data/inventory.db")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///data/orders.db")
 
-engine = create_async_engine("sqlite+aiosqlite:////data/inventory.db", connect_args={"check_same_thread": False})
+engine = create_async_engine("sqlite+aiosqlite:////data/orders.db", connect_args={"check_same_thread": False})
 
 SessionLocal = sessionmaker(
     bind=engine,

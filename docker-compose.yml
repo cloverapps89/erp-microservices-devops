@@ -1,21 +1,17 @@
 
 services:
 
-  inventory-service:
-    build: ./inventory-service
-    container_name: inventory-service
+  root-service:
+    build: ./root-service
+    container_name: root-service
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
     volumes:
-      - inventory_data:/data         # new named volume for DB
-      - ./inventory-service:/app     # still mount code, but DB is separate
+      - ./root-service:/app     # still mount code, but DB is separate
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=sqlite+aiosqlite:////data/inventory.db   # tell FastAPI where to store DB
-      - INVENTORY_URL=http://inventory-service:8000
-      - ORDERS_URL=http://orders-service:8001
-      - PUBLIC_INVENTORY_URL=http://127.0.0.1:8000
-      - PUBLIC_ORDERS_URL=http://127.0.0.1:8001
+      - INVENTORY_URL=http://inventory-service:8001
+      - ORDERS_URL=http://orders-service:8002
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
@@ -23,25 +19,79 @@ services:
       retries: 5
       start_period: 15s
 
+  inventory-service:
+    build: ./inventory-service
+    container_name: inventory-service
+    command: uvicorn main:app --host 0.0.0.0 --port 8001 --reload
+    volumes:
+      - inventory_data:/data         # new named volume for DB
+      - ./inventory-service:/app     # still mount code, but DB is separate
+    ports:
+      - "8001:8001"
+    environment:
+      - DATABASE_URL=sqlite+aiosqlite:////data/inventory.db   # tell FastAPI where to store DB
+      - INVENTORY_URL=http://inventory-service:8001
+      - ORDERS_URL=http://orders-service:8002
+      # - PUBLIC_INVENTORY_URL=http://127.0.0.1:8000
+      # - PUBLIC_ORDERS_URL=http://127.0.0.1:8001
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  seeder:
+    build: ./inventory-service/seeder
+    container_name: seeder
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - inventory-service
+    entrypoint: ["/bin/bash", "-c", "docker exec inventory-service python seed.py"]
+
+
   orders-service:
     build: ./orders-service
     container_name: orders-service
-    command: uvicorn main:app --host 0.0.0.0 --port 8001 --reload
+    command: uvicorn main:app --host 0.0.0.0 --port 8002 --reload
     volumes:
       - orders_data:/data         # new named volume for DB
       - ./orders-service:/app     # still mount code, but DB is separate
     ports:
-      - "8001:8001"
+      - "8002:8002"
     environment:
       - DATABASE_URL=sqlite+aiosqlite:////data/orders.db
-      - INVENTORY_URL=http://inventory-service:8000
-      - PUBLIC_INVENTORY_URL=http://127.0.0.1:8000
-      - PUBLIC_ORDERS_URL=http://127.0.0.1:8001
+      - INVENTORY_URL=http://inventory-service:8001
+      # - PUBLIC_INVENTORY_URL=http://127.0.0.1:8000
+      # - PUBLIC_ORDERS_URL=http://127.0.0.1:8001
     depends_on:
       inventory-service:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  vendors-service:
+    build: ./vendors-service
+    container_name: vendors-service
+    command: uvicorn main:app --host 0.0.0.0 --port 8003 --reload
+    volumes:
+      - vendors_data:/data         # new named volume for DB
+      - ./vendors-service:/app     # still mount code, but DB is separate
+    ports:
+      - "8003:8003"
+    environment:
+      - DATABASE_URL=sqlite+aiosqlite:////data/vendors.db
+      - VENDORS_URL=http://vendors-service:8003
+    depends_on:
+      inventory-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -57,8 +107,8 @@ services:
       inventory-service:
         condition: service_healthy
     environment:
-      - ORDERS_API=http://orders-service:8001/orders
-      - INVENTORY_API=http://inventory-service:8000/inventory
+      - ORDERS_API=http://orders-service:8002/orders
+      - INVENTORY_API=http://inventory-service:8001/inventory
 
   test-runner:
     image: python:3.11
@@ -71,6 +121,7 @@ services:
     volumes:
       - ./inventory-service:/inventory-service
       - ./orders-service:/orders-service
+      - ./vendors-service:/vendors-service
     working_dir: /app
     command: >
       bash -c "
@@ -78,12 +129,16 @@ services:
         source .venv/bin/activate &&
         pip install -r /inventory-service/requirements.txt &&
         pip install -r /orders-service/requirements.txt &&
+        pip install -r /vendors-service/requirements.txt &&
         pip install pytest requests pytest-cov &&
         echo '🧪 Testing inventory-service...' &&
         pytest --cov=/inventory-service --cov-report=xml -v /inventory-service/tests &&
         echo '🧪 Testing orders-service...' &&
-        pytest --cov=/orders-service --cov-report=xml -v /orders-service/tests 
+        pytest --cov=/orders-service --cov-report=xml -v /orders-service/tests
+        echo '🧪 Testing vendors-service...' &&
+        pytest --cov=/vendors-service --cov-report=xml -v /vendors-service/tests 
       "
 volumes:
   inventory_data:
   orders_data:
+  vendors_data:

@@ -167,204 +167,145 @@
   <!-- Bootstrap JS first to ensure its APIs are available to our script -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-  <script>
-    // Utility: get YYYY-MM-DD from a Date or ISO string
-    function toYMD(input) {
-      const d = (input instanceof Date) ? input : new Date(input);
-      const yyyy = d.getFullYear();
-      const mm = String(d.getMonth() + 1).padStart(2, "0");
-      const dd = String(d.getDate()).padStart(2, "0");
-      return `${yyyy}-${mm}-${dd}`;
-    }
-
-    // Initialize KPI "Orders Today" based on rendered orders' data-created-at
-    function initOrdersToday() {
-      const todayYMD = toYMD(new Date());
-      const items = document.querySelectorAll("#ordersAccordion .accordion-item");
-      let count = 0;
-      items.forEach(el => {
-        const created = el.getAttribute("data-created-at");
-        if (!created) return;
-        // Works whether created_at is YYYY-MM-DD or full ISO
-        if (toYMD(created) === todayYMD) count++;
-      });
-      const elToday = document.getElementById("orders-today");
-      if (elToday) elToday.textContent = count;
-      return count;
-    }
-
-    document.addEventListener("DOMContentLoaded", function () {
-      // Set initial "Orders Today"
-      let ordersTodayCount = initOrdersToday();
-
-      // Parse initial total (fallback to 0 if missing)
-      const totalEl = document.getElementById("total-orders");
-      let totalOrdersCount = totalEl ? parseInt(totalEl.textContent, 10) || 0 : 0;
-
-      const evtSource = new EventSource("/orders/stream");
-
-      evtSource.onmessage = function (event) {
-        const data = JSON.parse(event.data);
-
-        // Update KPI: total orders
-        totalOrdersCount += 1;
-        if (totalEl) totalEl.textContent = totalOrdersCount;
-
-        // Update KPI: orders today
-        const orderDate = new Date(data.created_at);
-        const isToday = toYMD(orderDate) === toYMD(new Date());
-        if (isToday) {
-          ordersTodayCount += 1;
-          const elToday = document.getElementById("orders-today");
-          if (elToday) elToday.textContent = ordersTodayCount;
-        }
-
-        // Update KPI: last order time
-        const lastTimeEl = document.getElementById("last-order-time");
-        if (lastTimeEl) {
-          lastTimeEl.textContent = orderDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-        }
-
-        // Prepend new order to accordion
-        const accordion = document.querySelector("#ordersAccordion");
-        if (accordion) {
-          const noOrdersAlert = document.querySelector("#no-orders-alert");
-          if (noOrdersAlert) noOrdersAlert.remove();
-
-          const idx = `order-${Date.now()}`;
-          const customerLabel =
-            (data.customer && (data.customer.nickname || data.customer.name)) ||
-            (typeof data.customer === "string" ? data.customer : "Customer");
-
-          const itemsHtml = Array.isArray(data.items) && data.items.length
-            ? `<ul class="list-group">` +
-              data.items.map(item => `
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                  <span>${item.emoji || ""} ${item.name || ""}</span>
-                  <span class="badge bg-secondary">Qty: ${item.quantity ?? ""}</span>
-                  <span class="badge bg-success">$${item.price ?? ""}</span>
-                </li>
-              `).join("") +
-              `</ul>`
-            : `<p class="text-muted">No items in this order.</p>`;
-
-          const wrapper = document.createElement("div");
-          wrapper.classList.add("accordion-item", "highlight");
-          wrapper.setAttribute("data-created-at", data.created_at || "");
-          wrapper.innerHTML = `
-            <h2 class="accordion-header" id="heading-${idx}">
-              <button class="accordion-button" type="button"
-                      data-bs-toggle="collapse"
-                      data-bs-target="#collapse-${idx}"
-                      aria-expanded="true"
-                      aria-controls="collapse-${idx}">
-                Order #${data.order_number ?? ""} — ${customerLabel} (${orderDate.toLocaleDateString()})
-              </button>
-            </h2>
-            <div id="collapse-${idx}"
-                 class="accordion-collapse collapse show"
-                 aria-labelledby="heading-${idx}"
-                 data-bs-parent="#ordersAccordion">
-              <div class="accordion-body">
-                ${itemsHtml}
-              </div>
-            </div>
-          `;
-
-          accordion.prepend(wrapper);
-
-          // Auto-collapse after 10s (only if Bootstrap Collapse API is present)
-          setTimeout(() => {
-            const collapseEl = document.querySelector(`#collapse-${idx}`);
-            if (collapseEl && window.bootstrap && window.bootstrap.Collapse) {
-              const inst = window.bootstrap.Collapse.getOrCreateInstance(collapseEl);
-              inst.hide();
-            }
-          }, 10000);
-        }
-
-        // Inventory live update + highlight
-        if (Array.isArray(data.items)) {
-          data.items.forEach(item => {
-            if (!item || !item.sku) return;
-            document.querySelectorAll(".card").forEach(card => {
-              if (card.textContent.includes(item.sku)) {
-                const stockElem = card.querySelector(".stock-value");
-                
-                if (stockElem && item.new_quantity !== undefined) {
-                  stockElem.textContent = item.new_quantity;
-                  const qty = parseInt(item.new_quantity, 10);
-                  card.classList.remove("stock-low", "stock-medium", "stock-high");
-                  if (qty <= 2) card.classList.add("stock-low");
-                  else if (qty <= 5) card.classList.add("stock-medium");
-                  else card.classList.add("stock-high");
-                }
-                card.classList.add("highlight");
-                updateInventoryKPIs();
-                setTimeout(() => card.classList.remove("highlight"), 25000);
-              }
-            });
-          });
-        }
-      };
-    });
-
-function updateInventoryKPIs() {
-  const items = document.querySelectorAll(".card .stock-value");
-  let lowStock = 0;
-  let outOfStock = 0;
-  let totalValue = 0;
-
-  items.forEach(el => {
-    const qty = parseInt(el.textContent, 10);
-    const card = el.closest(".card");
-
-    const paragraphs = card.querySelectorAll("p");
-    let price = 0;
-
-    paragraphs.forEach(p => {
-      if (p.textContent.includes("Price")) {
-        const match = p.textContent.match(/\$([\d.]+)/);
-        if (match) {
-          price = parseFloat(match[1]);
-        }
-      }
-    });
-
-    if (qty === 0) outOfStock++;
-    if (qty <= 2) lowStock++;
-    totalValue += qty * price;
-  });
-
-  flashUpdate("low-stock-count", lowStock);
-  flashUpdate("out-of-stock-count", outOfStock);
-  flashUpdate("inventory-value", `$${totalValue.toFixed(2)}`);
-}
-
-function flashUpdate(id, newValue) {
-  const el = document.getElementById(id);
-  if (el && el.textContent !== String(newValue)) {
-    el.textContent = newValue;
-    el.classList.add("kpi-flash");
-    setTimeout(() => el.classList.remove("kpi-flash"), 500);
-  }
-}
-
+<script>
 document.addEventListener("DOMContentLoaded", () => {
+  const toYMD = date => new Date(date).toISOString().split("T")[0];
+  const todayYMD = toYMD(new Date());
+
+  let totalOrders = parseInt(document.getElementById("total-orders")?.textContent || "0", 10);
+  let ordersToday = 0;
+
+  function flashUpdate(id, newValue) {
+    const el = document.getElementById(id);
+    if (el && el.textContent !== String(newValue)) {
+      el.textContent = newValue;
+      // el.classList.add("kpi-flash");
+      // setTimeout(() => el.classList.remove("kpi-flash"), 500);
+    }
+  }
+
+  function initOrdersToday() {
+    const items = document.querySelectorAll("#ordersAccordion .accordion-item");
+    ordersToday = Array.from(items).filter(el => toYMD(el.dataset.createdAt) === todayYMD).length;
+    flashUpdate("orders-today", ordersToday);
+  }
+
+  function updateInventoryKPIs() {
+    const cards = document.querySelectorAll(".card .stock-value");
+    let lowStock = 0, outOfStock = 0, totalValue = 0;
+
+    cards.forEach(el => {
+      const qty = parseInt(el.textContent, 10);
+      const card = el.closest(".card");
+
+      // Reset and apply stock level classes
+      card.classList.remove("stock-low", "stock-medium", "stock-high");
+      if (qty === 0) {
+        outOfStock++;
+        card.classList.add("stock-low");
+      } else if (qty <= 2) {
+        lowStock++;
+        card.classList.add("stock-low");
+      } else if (qty <= 5) {
+        card.classList.add("stock-medium");
+      } else {
+        card.classList.add("stock-high");
+      }
+
+      // Extract price
+      const priceText = Array.from(card.querySelectorAll("p"))
+        .find(p => p.textContent.includes("Price"))?.textContent || "";
+      const match = priceText.match(/\$([\d.]+)/);
+      const price = match ? parseFloat(match[1]) : 0;
+
+      totalValue += qty * price;
+    });
+
+    flashUpdate("low-stock-count", lowStock);
+    flashUpdate("out-of-stock-count", outOfStock);
+    flashUpdate("inventory-value", `$${totalValue.toFixed(2)}`);
+  }
+
+  initOrdersToday();
   updateInventoryKPIs();
 
-  const inventorySection = document.getElementById("inventory-section") || document.querySelector(".col-md-6 .row");
-  if (inventorySection) {
-    const observer = new MutationObserver(() => updateInventoryKPIs());
-    observer.observe(inventorySection, {
-      childList: true,
-      subtree: true,
-      characterData: true,
-    });
-  }
+  const evtSource = new EventSource("/orders/stream");
+
+  evtSource.onmessage = ({ data }) => {
+    const order = JSON.parse(data);
+    const orderDate = new Date(order.created_at);
+    const isToday = toYMD(orderDate) === todayYMD;
+
+    totalOrders++;
+    flashUpdate("total-orders", totalOrders);
+
+    if (isToday) {
+      ordersToday++;
+      flashUpdate("orders-today", ordersToday);
+    }
+
+    document.getElementById("last-order-time").textContent =
+      orderDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+    const idx = `order-${performance.now().toFixed(2)}`;
+    const customer = order.customer?.nickname || order.customer?.name || "Customer";
+
+    const itemsHtml = Array.isArray(order.items) && order.items.length
+      ? `<ul class="list-group">` + order.items.map(item => `
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <span>${item.emoji || ""} ${item.name || ""}</span>
+            <span class="badge bg-secondary">Qty: ${item.quantity}</span>
+            <span class="badge bg-success">$${item.price}</span>
+          </li>`).join("") + `</ul>`
+      : `<p class="text-muted">No items in this order.</p>`;
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "accordion-item highlight";
+    wrapper.dataset.createdAt = order.created_at;
+    wrapper.innerHTML = `
+      <h2 class="accordion-header" id="heading-${idx}">
+        <button class="accordion-button" type="button" data-bs-toggle="collapse"
+                data-bs-target="#collapse-${idx}" aria-expanded="true" aria-controls="collapse-${idx}">
+          Order #${order.order_number} — ${customer} (${orderDate.toLocaleDateString()})
+        </button>
+      </h2>
+      <div id="collapse-${idx}" class="accordion-collapse collapse show"
+           aria-labelledby="heading-${idx}" data-bs-parent="#ordersAccordion">
+        <div class="accordion-body">${itemsHtml}</div>
+      </div>`;
+
+    const accordion = document.getElementById("ordersAccordion");
+    accordion.prepend(wrapper);
+    document.getElementById("no-orders-alert")?.remove();
+
+    setTimeout(() => {
+      const collapseEl = document.getElementById(`collapse-${idx}`);
+      if (collapseEl && window.bootstrap?.Collapse) {
+        window.bootstrap.Collapse.getOrCreateInstance(collapseEl).hide();
+      }
+    }, 10000);
+
+    // Update inventory cards
+    if (Array.isArray(order.items)) {
+      order.items.forEach(item => {
+        if (!item?.sku) return;
+        document.querySelectorAll(".card").forEach(card => {
+          if (card.textContent.includes(item.sku)) {
+            const stockElem = card.querySelector(".stock-value");
+            if (stockElem && item.new_quantity !== undefined) {
+              stockElem.textContent = item.new_quantity;
+              card.classList.add("highlight");
+              setTimeout(() => card.classList.remove("highlight"), 25000);
+            }
+          }
+        });
+      });
+      updateInventoryKPIs();
+    }
+  };
 });
+</script>
 
 
-  </script>
 </body>
 </html>
