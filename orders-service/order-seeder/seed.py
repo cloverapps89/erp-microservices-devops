@@ -2,118 +2,94 @@ import asyncio
 import os
 import random
 import string
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone, timedelta
+
 import httpx
 
-# Public service URLs (adjust if running in Docker vs local)
-ORDERS_API = os.getenv("ORDERS_API", "http://localhost:8001/orders")
-INVENTORY_API = os.getenv("INVENTORY_API", "http://localhost:8000/inventory")
+# Config
+ORDERS_API = os.getenv("ORDERS_API", "http://localhost:8002/orders")
+INVENTORY_API = os.getenv("INVENTORY_API", "http://localhost:8001/inventory")
+HTTP_TIMEOUT = float(os.getenv("HTTP_TIMEOUT", 10))
 
-# Base customer data to randomize from
+
+# Sample customers
 customer_data = [
-    {"name": "Alice Johnson",     "nickname": "AJ",     "email": "alice.j@example.com"},
-    {"name": "Robert Smith",      "nickname": "Bobby",  "email": "robert.smith@example.com"},
-    {"name": "Cynthia Lee",       "nickname": "Cyn",    "email": "cynthia.lee@example.com"},
-    {"name": "David Martinez",    "nickname": "Dave",   "email": "d.martinez@example.com"},
-    {"name": "Emily Chen",        "nickname": "Em",     "email": "emily.chen@example.com"},
-    {"name": "Franklin Wright",   "nickname": "Frank",  "email": "frank.w@example.com"},
-    {"name": "Grace Thompson",    "nickname": "Gracie", "email": "grace.t@example.com"},
-    {"name": "Henry Patel",       "nickname": "Hank",   "email": "henry.patel@example.com"},
-    {"name": "Isabella Nguyen",   "nickname": "Izzy",   "email": "isabella.n@example.com"},
-    {"name": "Jason Kim",         "nickname": "Jay",    "email": "jason.kim@example.com"},
+    {"name": "Alice Johnson", "nickname": "AJ", "email": "alice.j@example.com"},
+    {"name": "Robert Smith", "nickname": "Bobby", "email": "robert.smith@example.com"},
+    {"name": "Cynthia Lee", "nickname": "Cyn", "email": "cynthia.lee@example.com"},
 ]
 
-def random_suffix(length=5):
-    """Generate a short random suffix for uniqueness."""
+def random_suffix(length=4):
     return ''.join(random.choices(string.ascii_lowercase + string.digits, k=length))
 
 def random_customer():
-    """Pick a base customer and return randomized nickname/email."""
     base = random.choice(customer_data)
     suffix = random_suffix()
     return {
-        "name": base["name"],  # not unique
-        "nickname": f"{base['nickname']}_{suffix}",  # unique
-        "email": f"{base['email'].split('@')[0]}_{suffix}@{base['email'].split('@')[1]}"  # unique
+        "name": base["name"],
+        "nickname": f"{base['nickname']}_{suffix}",
+        "email": f"{base['email'].split('@')[0]}_{suffix}@{base['email'].split('@')[1]}",
     }
 
-def random_timestamp():
-    now = datetime.now(timezone.utc)
-    delta = timedelta(days=random.randint(0, 30), hours=random.randint(0, 23))
-    return now - delta
-
-async def fetch_inventory():
-    """Fetch live inventory from inventory-service."""
-    async with httpx.AsyncClient(timeout=5.0) as client:
-        resp = await client.get(INVENTORY_API, headers={"Accept": "application/json"})
-        resp.raise_for_status()
-        data = resp.json()
-        return data.get("inventory", [])
-
-async def create_order_via_api(order_payload):
-    """Send order to orders-service API."""
-    async with httpx.AsyncClient(timeout=5.0) as client:
-        resp = await client.post(
-            ORDERS_API,
-            json=order_payload,
-            headers={"Accept": "application/json"}
+async def fetch_inventory(client):
+    try:
+        resp = await client.get(
+            INVENTORY_API,
+            headers={"Accept": "application/json"},
+            timeout=HTTP_TIMEOUT,
         )
         resp.raise_for_status()
-        return resp.json()
+        return resp.json().get("inventory", [])
+    except Exception as e:
+        print(f"❌ Failed to fetch inventory: {e}")
+        return []
 
-async def seed_orders(n=10):
-    inventory = await fetch_inventory()
+
+
+def generate_order_payload(inventory):
     if not inventory:
-        print("❌ No inventory available — cannot seed orders.")
-        return
+        return None
+    cust = random_customer()
+    items = random.sample(inventory, k=min(len(inventory), random.randint(1, 5)))
+    items_payload = [
+        {"sku": item["sku"], "quantity": random.randint(1, min(item["quantity"], 10)), "price": item["price"]}
+        for item in items if item["quantity"] > 0
+    ]
+    if not items_payload:
+        return None
+    return {
+        "order_number": f"{int(datetime.now().timestamp())}{random.randint(100,999)}",
+        "customer_name": cust["name"],
+        "customer_nickname": cust["nickname"],
+        "customer_email": cust["email"],
+        "items": items_payload,
+    }
 
-    for _ in range(n):
-        order_number = 1000 + random.randint(1, 9999)
-        cust = random_customer()
+async def seed_orders(n=10, batch_size=5):
+    async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
+        inventory = await fetch_inventory(client)
+        print(f"🧪 Started batch - #orders {n} - #perbatch {batch_size}", flush=True)
+        if not inventory:
+            print("❌ No inventory available.")
+            return
 
-        # Pick 1–5 random items from inventory
-        selected_items = random.sample(
-            inventory,
-            k=min(len(inventory), random.randint(1, 20))
-        )
-
-        # Build order payload
-        items_payload = []
-        for item in selected_items:
-            qty = random.randint(1, 3)
-            # Skip if not enough stock
-            if item["quantity"] < qty:
+        for i in range(0, n, batch_size):
+            
+            batch = [generate_order_payload(inventory) for _ in range(batch_size)]
+            batch = [b for b in batch if b]  # drop Nones
+            if not batch:
                 continue
-            items_payload.append({
-                "sku": item["sku"],
-                "quantity": qty,
-                "price": item["price"]
-            })
 
-        if not items_payload:
-            continue
-
-        payload = {
-            "order_number": order_number,
-            "customer_name": cust["name"],
-            "customer_nickname": cust["nickname"],
-            "customer_email": cust["email"],
-            "items": items_payload
-        }
-
-        try:
-            result = await create_order_via_api(payload)
-            print(f"✅ Created order {order_number} for {cust['name']} ({cust['nickname']})")
-            print(f"   Updated stock: {result.get('updated_stock')}")
-            await asyncio.sleep(0.1) 
-        except httpx.HTTPStatusError as e:
-            print(f"❌ Failed to create order {order_number}: {e.response.text}")
+            try:
+                resp = await client.post(ORDERS_API, json=batch, headers={"Accept": "application/json"})
+                resp.raise_for_status()
+                print(f"✅ Batch {i//batch_size + 1}", flush=True)
+            except Exception as e:
+                print(f"⚠️ Failed batch {i//batch_size + 1}: {e}", flush=True)
 
 async def main():
-    while True:
-        await seed_orders(n=5)  # Number of orders to simulate
-        print("✅ ORDER SUBMITTED")
-        await asyncio.sleep(10)
+    await seed_orders(n=400, batch_size=25)
+    print("🏁 DONE")
 
 if __name__ == "__main__":
     asyncio.run(main())

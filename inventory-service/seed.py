@@ -36,7 +36,7 @@ def random_timestamp():
     return now - delta
 
 # 🏗️ Generate inventory
-def generate_inventory(n=600):
+def generate_inventory(n=500):
     items = []
     categories = list(emoji_map.keys())
     for _ in range(n):
@@ -45,7 +45,7 @@ def generate_inventory(n=600):
         item = InventoryItem(
             name=f"{category.capitalize()} Item {random.randint(1, 999)}",
             sku=generate_sku(),
-            quantity=random.randint(1, 500),
+            quantity=random.randint(5000, 50000),
             price=random.randint(100, 9999),
             emoji=emoji
         )
@@ -64,8 +64,9 @@ async def seed():
 
         session.add_all(inventory )
         await session.commit()
+        print(f"🧪 Number of itmes restocked - {len(inventory)}", flush=True)
 
-    print("✅ Seeded inventory, customers, and orders.")
+    print("✅ Seeded inventory.", flush=True)
 
 if __name__ == "__main__":
     asyncio.run(seed())
