@@ -121,7 +121,7 @@ services:
     volumes:
       - ./inventory-service:/inventory-service
       - ./orders-service:/orders-service
-      - ./vendors-service:/vendors-service
+      # - ./vendors-service:/vendors-service
     working_dir: /app
     command: >
       bash -c "
@@ -141,4 +141,4 @@ services:
 volumes:
   inventory_data:
   orders_data:
-  vendors_data:
+  # vendors_data:
