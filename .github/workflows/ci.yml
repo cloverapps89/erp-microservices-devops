@@ -47,12 +47,6 @@ jobs:
 
       - name: 🧪 Run integration tests
         run: |
-          # python -m venv .venv
-          # source .venv/bin/activate
-          # pip install -r inventory-service/requirements.txt
-          # pip install -r orders-service/requirements.txt
-          # pip install pytest requests pytest-cov
-          # pytest --cov=. --cov-report=xml
           echo "🧪 Waiting for test-runner to finish..."
           docker logs -f test-runner || { echo "❌ Tests failed inside test-runner."; exit 1; }
 

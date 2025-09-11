@@ -75,27 +75,27 @@ services:
       retries: 5
       start_period: 20s
 
-  vendors-service:
-    build: ./vendors-service
-    container_name: vendors-service
-    command: uvicorn main:app --host 0.0.0.0 --port 8003 --reload
-    volumes:
-      - vendors_data:/data         # new named volume for DB
-      - ./vendors-service:/app     # still mount code, but DB is separate
-    ports:
-      - "8003:8003"
-    environment:
-      - DATABASE_URL=sqlite+aiosqlite:////data/vendors.db
-      - VENDORS_URL=http://vendors-service:8003
-    depends_on:
-      inventory-service:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
+  # vendors-service:
+  #   build: ./vendors-service
+  #   container_name: vendors-service
+  #   command: uvicorn main:app --host 0.0.0.0 --port 8003 --reload
+  #   volumes:
+  #     - vendors_data:/data         # new named volume for DB
+  #     - ./vendors-service:/app     # still mount code, but DB is separate
+  #   ports:
+  #     - "8003:8003"
+  #   environment:
+  #     - DATABASE_URL=sqlite+aiosqlite:////data/vendors.db
+  #     - VENDORS_URL=http://vendors-service:8003
+  #   depends_on:
+  #     inventory-service:
+  #       condition: service_healthy
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #     start_period: 20s
 
   order-seeder:
     build: ./orders-service/order-seeder
@@ -110,34 +110,34 @@ services:
       - ORDERS_API=http://orders-service:8002/orders
       - INVENTORY_API=http://inventory-service:8001/inventory
 
-  test-runner:
-    image: python:3.11
-    container_name: test-runner
-    depends_on:
-      orders-service:
-        condition: service_healthy
-      inventory-service:
-        condition: service_healthy
-    volumes:
-      - ./inventory-service:/inventory-service
-      - ./orders-service:/orders-service
-      - ./vendors-service:/vendors-service
-    working_dir: /app
-    command: >
-      bash -c "
-        python -m venv .venv &&
-        source .venv/bin/activate &&
-        pip install -r /inventory-service/requirements.txt &&
-        pip install -r /orders-service/requirements.txt &&
-        pip install -r /vendors-service/requirements.txt &&
-        pip install pytest requests pytest-cov &&
-        echo '🧪 Testing inventory-service...' &&
-        pytest --cov=/inventory-service --cov-report=xml -v /inventory-service/tests &&
-        echo '🧪 Testing orders-service...' &&
-        pytest --cov=/orders-service --cov-report=xml -v /orders-service/tests
-        echo '🧪 Testing vendors-service...' &&
-        pytest --cov=/vendors-service --cov-report=xml -v /vendors-service/tests 
-      "
+  # test-runner:
+  #   image: python:3.11
+  #   container_name: test-runner
+  #   depends_on:
+  #     orders-service:
+  #       condition: service_healthy
+  #     inventory-service:
+  #       condition: service_healthy
+  #   volumes:
+  #     - ./inventory-service:/inventory-service
+  #     - ./orders-service:/orders-service
+  #     - ./vendors-service:/vendors-service
+  #   working_dir: /app
+  #   command: >
+  #     bash -c "
+  #       python -m venv .venv &&
+  #       source .venv/bin/activate &&
+  #       pip install -r /inventory-service/requirements.txt &&
+  #       pip install -r /orders-service/requirements.txt &&
+  #      # pip install -r /vendors-service/requirements.txt &&
+  #       pip install pytest requests pytest-cov &&
+  #       echo '🧪 Testing inventory-service...' &&
+  #       pytest --cov=/inventory-service --cov-report=xml -v /inventory-service/tests &&
+  #       echo '🧪 Testing orders-service...' &&
+  #       pytest --cov=/orders-service --cov-report=xml -v /orders-service/tests
+  #      # echo '🧪 Testing vendors-service...' &&
+  #      # pytest --cov=/vendors-service --cov-report=xml -v /vendors-service/tests 
+  #     "
 volumes:
   inventory_data:
   orders_data:

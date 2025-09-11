@@ -1,236 +1,419 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Live Orders & Inventory Dashboard</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-  <style>
-    body { background: #f8f9fa; }
-    .highlight { animation: fadeHighlight 25s ease-out; background-color: #fff3cd !important; }
-    @keyframes fadeHighlight { 0% { background-color:#fff3cd } 100% { background-color:transparent } }
-    .scroll-panel { max-height: 80vh; overflow-y: auto; }
-    .stock-low { background-color:#f8d7da !important; }
-    .stock-medium { background-color:#fff3cd !important; }
-    .stock-high { background-color:#d1e7dd !important; }
-    .kpi-card h5 { font-size: 1.5rem; font-weight: bold; }
+    <meta charset="utf-8" />
+    <title>Workflow</title>
+    <style>
+        :root{
+            --bg:#0f1724;
+            --lit:#ffd166;
+            --muted:#94a3b8;
+            --emoji-size:6rem;
+            --cog-size:56px;
+            --arrow-seg-w:28px;
+            --arrow-seg-h:12px;
+            --segment-gap:6px;
+        }
 
-    .kpi-flash {
-  background-color: #ffeeba;
-  transition: background-color 0.3s ease;
-  border-radius: 4px;
-  padding: 0.2em 0.5em;
-}
+        body{
+            margin:0;
+            height:100vh;
+            background: radial-gradient(circle at top, #152236, #0f1724);
+            color:white;
+            font-family:sans-serif;
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+            justify-content:flex-start;
+            padding:1rem;
+        }
 
-  </style>
+        h1{margin:0.5rem;font-weight:700;letter-spacing:0.06em;}
+
+        .stage{
+            flex:1;
+            display:grid;
+            grid-template-rows:1fr 1fr;
+            gap:1rem;
+            width:100%;
+            max-width:1200px;
+            position:relative;
+        }
+
+        .row{
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            background:rgba(255,255,255,0.03);
+            border-radius:1rem;
+            position:relative;
+            padding:1rem;
+        }
+
+        .flow{
+            display:flex;
+            gap:2rem;
+            align-items:center;
+            flex-wrap:wrap;
+        }
+
+        .node{text-align:center;}
+
+        .emoji{
+            font-size:var(--emoji-size);
+            opacity:0.4;
+            transition:all .3s ease;
+            filter:drop-shadow(0 0 0 transparent);
+        }
+        .emoji.active{
+            opacity:1;
+            animation:pulse 1.5s infinite;
+            filter:drop-shadow(0 0 20px rgba(255,210,100,0.6));
+        }
+        @keyframes pulse{
+            0%,100%{transform:scale(1);}
+            50%{transform:scale(1.1);}
+        }
+
+        .label{margin-top:.25rem;font-size:.9rem;color:var(--muted);}
+
+        .cog{
+            width:var(--cog-size);height:var(--cog-size);
+            display:grid;place-items:center;
+            opacity:0;transition:opacity .2s;
+        }
+        .cog svg{width:70%;height:70%;}
+        .cog.spinning{opacity:1;animation:spin 1s linear infinite;}
+        @keyframes spin{to{transform:rotate(360deg);}}
+
+        .arrow{
+            display:flex;gap:var(--segment-gap);opacity:0;
+            transition:opacity .2s;
+            align-items:center;
+        }
+        .arrow.visible{opacity:1;}
+        .seg{
+            width:var(--arrow-seg-w);height:var(--arrow-seg-h);
+            border-radius:6px;background:rgba(255,255,255,0.05);
+            box-shadow:inset 0 0 4px rgba(0,0,0,0.5);
+            transition:all .15s;
+        }
+        .seg.lit{
+            background:linear-gradient(90deg,var(--lit),#ffa94d);
+            box-shadow:0 0 12px rgba(255,200,80,0.8);
+            transform:translateY(-2px);
+        }
+        .arrow-head{
+            width:0;height:0;
+            border-top:var(--arrow-seg-h) solid transparent;
+            border-bottom:var(--arrow-seg-h) solid transparent;
+            border-left:20px solid rgba(255,255,255,0.1);
+            transition:all .15s;
+        }
+        .arrow-head.lit{
+            border-left-color:var(--lit);
+            filter:drop-shadow(0 0 10px rgba(255,200,80,0.8));
+        }
+
+        /* Styles for reversed arrows (bottom row) */
+        .arrow.reverse{
+            flex-direction: row-reverse;
+        }
+        .arrow.reverse .seg.lit{
+            background:linear-gradient(90deg,var(--lit),#ffa94d);
+        }
+        .arrow.reverse .arrow-head{
+            border-left:none;
+            border-right:20px solid rgba(255,255,255,0.1);
+        }
+        .arrow.reverse .arrow-head.lit{
+            border-right-color:var(--lit);
+        }
+
+
+        /* Styles for the new vertical connector arrow */
+        .vertical-arrow-container{
+            position:absolute;
+            right:12%;
+            top:calc(50% - 70px);
+            height:140px;
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+            justify-content:space-between;
+            opacity:0;
+            transition:opacity .2s;
+            pointer-events: none;
+        }
+        .vertical-arrow-container.visible{opacity:1;}
+        .vertical-arrow-seg{
+            width:var(--arrow-seg-h);
+            height:var(--arrow-seg-w);
+            border-radius:6px;
+            background:rgba(255,255,255,0.05);
+            box-shadow:inset 0 0 4px rgba(0,0,0,0.5);
+            transition:all .15s;
+        }
+        .vertical-arrow-seg.lit{
+            background:linear-gradient(180deg,var(--lit),#ffa94d);
+            box-shadow:0 0 12px rgba(255,200,80,0.8);
+            transform:translateX(-2px);
+        }
+        .vertical-arrow-head{
+            width:0;
+            height:0;
+            border-left:var(--arrow-seg-h) solid transparent;
+            border-right:var(--arrow-seg-h) solid transparent;
+            border-top:20px solid rgba(255,255,255,0.1);
+            transition:all .15s;
+        }
+        .vertical-arrow-head.lit{
+            border-top-color:var(--lit);
+            filter:drop-shadow(0 0 10px rgba(255,200,80,0.8));
+        }
+
+        .controls{position:absolute;top:.5rem;right:.5rem;display:flex;gap:.5rem;}
+        button{padding:.4rem .8rem;border:none;border-radius:.5rem;cursor:pointer;font-weight:bold;}
+        .start{background:#38bdf8;color:#012;}
+        .reset{background:#1e293b;color:white;}
+
+        .progress{position:absolute;bottom:.5rem;right:.5rem;font-size:.9rem;color:var(--muted);}
+
+        .queue{
+            position:absolute;top:.5rem;left:.5rem;
+            background:rgba(255,255,255,0.05);padding:.5rem;border-radius:.5rem;
+            font-size:.8rem;color:var(--muted);
+        }
+        .queue .current{color:var(--lit);font-weight:bold;}
+        .queue .done{text-decoration:line-through;color:#64748b;}
+    </style>
 </head>
 <body>
-  <div class="container-fluid py-4">
-    <div class="row g-4">
-      <!-- Orders Column -->
-      <div class="col-md-6">
-        <h2 class="mb-3">📦 Orders</h2>
-
-        <!-- Mini KPI Dashboard -->
-        <div class="card mb-3 shadow-sm kpi-card">
-          <div class="card-body d-flex justify-content-around text-center">
-            <div>
-              <h5 id="total-orders">{{ orders|length }}</h5>
-              <small class="text-muted">Total Orders</small>
+    <h1>Workflow</h1>
+    <div class="stage">
+        <div class="row">
+            <div class="flow">
+                <div class="node"><div class="emoji" id="vendor-shop">🏬</div><div class="label">Vendor Shop</div></div>
+                <div class="cog" id="cog1">⚙️</div>
+                <div class="arrow" id="arrow1">
+                    <div class="seg"></div><div class="seg"></div><div class="seg"></div><div class="seg"></div><div class="seg"></div>
+                    <div class="arrow-head"></div>
+                </div>
+                <div class="node"><div class="emoji" id="invoice">🧾</div><div class="label">Invoice</div></div>
+                <div class="cog" id="cog2">⚙️</div>
+                <div class="arrow" id="arrow2">
+                    <div class="seg"></div><div class="seg"></div><div class="seg"></div><div class="seg"></div><div class="seg"></div>
+                    <div class="arrow-head"></div>
+                </div>
+                <div class="node"><div class="emoji" id="email">✉️</div><div class="label">Email</div></div>
             </div>
-            <div>
-              <!-- Initialize via JS to avoid Jinja date/test pitfalls -->
-              <h5 id="orders-today">0</h5>
-              <small class="text-muted">Orders Today</small>
+            <div class="controls">
+                <button class="reset" id="resetBtn">Reset</button>
+                <button class="start" id="startBtn">Start</button>
             </div>
-            <div>
-              <h5 id="last-order-time">—</h5>
-              <small class="text-muted">Last Order</small>
-            </div>
-          </div>
+            <div class="queue" id="queueBox">Queue: none</div>
+            <div class="progress" id="progressBox">0%</div>
         </div>
 
-        {% set highlight_skus = highlight_skus or [] %}
+        <div class="vertical-arrow-container" id="vertical-arrow">
+            <div class="vertical-arrow-seg"></div>
+            <div class="vertical-arrow-seg"></div>
+            <div class="vertical-arrow-seg"></div>
+            <div class="vertical-arrow-head"></div>
+        </div>
 
-        {% if orders %}
-          <div id="ordersAccordion" class="accordion scroll-panel">
-            {% for order in orders %}
-              <div
-                class="accordion-item {% if order['order_number'] in highlight_skus %}highlight{% endif %}"
-                data-created-at="{{ order['created_at'] }}"
-              >
-                <h2 class="accordion-header" id="heading{{ loop.index }}">
-                  <button
-                    class="accordion-button collapsed"
-                    type="button"
-                    data-bs-toggle="collapse"
-                    data-bs-target="#collapse{{ loop.index }}"
-                    aria-expanded="false"
-                    aria-controls="collapse{{ loop.index }}"
-                  >
-                    Order #{{ order["order_number"] }} — {{ order["customer"] }} ({{ order["created_at"] }})
-                  </button>
-                </h2>
-                <div
-                  id="collapse{{ loop.index }}"
-                  class="accordion-collapse collapse"
-                  aria-labelledby="heading{{ loop.index }}"
-                  data-bs-parent="#ordersAccordion"
-                >
-                  <div class="accordion-body">
-                    {% if order["items"] %}
-                      <ul class="list-group">
-                        {% for item in order["items"] %}
-                          <li
-                            class="list-group-item d-flex justify-content-between align-items-center {% if item.sku in highlight_skus %}highlight{% endif %}"
-                          >
-                            <span>{{ item.emoji }} {{ item.name }}</span>
-                            <span class="badge bg-secondary">Qty: {{ item.quantity }}</span>
-                            <span class="badge bg-success">${{ item.price }}</span>
-                          </li>
-                        {% endfor %}
-                      </ul>
-                      <div class="mt-3 text-end">
-                        <strong>Total: ${{ order["items"] | sum(attribute="price") }}</strong>
-                      </div>
-                    {% else %}
-                      <p class="text-muted">No items in this order.</p>
-                    {% endif %}
-                  </div>
+        <div class="row">
+            <div class="flow" style="flex-direction: row-reverse;">
+                <div class="node"><div class="emoji" id="factory">🏭</div><div class="label">Factory</div></div>
+                <div class="cog" id="cog4">⚙️</div>
+                <div class="arrow reverse" id="arrow4">
+                    <div class="seg"></div><div class="seg"></div><div class="seg"></div><div class="seg"></div><div class="seg"></div>
+                    <div class="arrow-head"></div>
                 </div>
-              </div>
-            {% endfor %}
-          </div>
-        {% else %}
-          <p id="no-orders-alert" class="alert alert-info">
-            No orders yet! 🚀 Start by creating one from the API.
-          </p>
-          <div id="ordersAccordion" class="accordion scroll-panel"></div>
-        {% endif %}
-      </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Bootstrap JS first to ensure its APIs are available to our script -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
-  <script>
-    // Utility: get YYYY-MM-DD from a Date or ISO string
-    function toYMD(input) {
-      const d = (input instanceof Date) ? input : new Date(input);
-      const yyyy = d.getFullYear();
-      const mm = String(d.getMonth() + 1).padStart(2, "0");
-      const dd = String(d.getDate()).padStart(2, "0");
-      return `${yyyy}-${mm}-${dd}`;
-    }
-
-    // Initialize KPI "Orders Today" based on rendered orders' data-created-at
-    function initOrdersToday() {
-      const todayYMD = toYMD(new Date());
-      const items = document.querySelectorAll("#ordersAccordion .accordion-item");
-      let count = 0;
-      items.forEach(el => {
-        const created = el.getAttribute("data-created-at");
-        if (!created) return;
-        // Works whether created_at is YYYY-MM-DD or full ISO
-        if (toYMD(created) === todayYMD) count++;
-      });
-      const elToday = document.getElementById("orders-today");
-      if (elToday) elToday.textContent = count;
-      return count;
-    }
-
-    document.addEventListener("DOMContentLoaded", function () {
-      // Set initial "Orders Today"
-      let ordersTodayCount = initOrdersToday();
-
-      // Parse initial total (fallback to 0 if missing)
-      const totalEl = document.getElementById("total-orders");
-      let totalOrdersCount = totalEl ? parseInt(totalEl.textContent, 10) || 0 : 0;
-
-      const evtSource = new EventSource("/orders/stream");
-
-      evtSource.onmessage = function (event) {
-        const data = JSON.parse(event.data);
-
-        // Update KPI: total orders
-        totalOrdersCount += 1;
-        if (totalEl) totalEl.textContent = totalOrdersCount;
-
-        // Update KPI: orders today
-        const orderDate = new Date(data.created_at);
-        const isToday = toYMD(orderDate) === toYMD(new Date());
-        if (isToday) {
-          ordersTodayCount += 1;
-          const elToday = document.getElementById("orders-today");
-          if (elToday) elToday.textContent = ordersTodayCount;
-        }
-
-        // Update KPI: last order time
-        const lastTimeEl = document.getElementById("last-order-time");
-        if (lastTimeEl) {
-          lastTimeEl.textContent = orderDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-        }
-
-        // Prepend new order to accordion
-        const accordion = document.querySelector("#ordersAccordion");
-        if (accordion) {
-          const noOrdersAlert = document.querySelector("#no-orders-alert");
-          if (noOrdersAlert) noOrdersAlert.remove();
-
-          const idx = `order-${Date.now()}`;
-          const customerLabel =
-            (data.customer && (data.customer.nickname || data.customer.name)) ||
-            (typeof data.customer === "string" ? data.customer : "Customer");
-
-          const itemsHtml = Array.isArray(data.items) && data.items.length
-            ? `<ul class="list-group">` +
-              data.items.map(item => `
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                  <span>${item.emoji || ""} ${item.name || ""}</span>
-                  <span class="badge bg-secondary">Qty: ${item.quantity ?? ""}</span>
-                  <span class="badge bg-success">$${item.price ?? ""}</span>
-                </li>
-              `).join("") +
-              `</ul>`
-            : `<p class="text-muted">No items in this order.</p>`;
-
-          const wrapper = document.createElement("div");
-          wrapper.classList.add("accordion-item", "highlight");
-          wrapper.setAttribute("data-created-at", data.created_at || "");
-          wrapper.innerHTML = `
-            <h2 class="accordion-header" id="heading-${idx}">
-              <button class="accordion-button" type="button"
-                      data-bs-toggle="collapse"
-                      data-bs-target="#collapse-${idx}"
-                      aria-expanded="true"
-                      aria-controls="collapse-${idx}">
-                Order #${data.order_number ?? ""} — ${customerLabel} (${orderDate.toLocaleDateString()})
-              </button>
-            </h2>
-            <div id="collapse-${idx}"
-                 class="accordion-collapse collapse show"
-                 aria-labelledby="heading-${idx}"
-                 data-bs-parent="#ordersAccordion">
-              <div class="accordion-body">
-                ${itemsHtml}
-              </div>
+                <div class="node"><div class="emoji" id="package">📦</div><div class="label">Package</div></div>
+                <div class="cog" id="cog3">⚙️</div>
+                <div class="arrow reverse" id="arrow3">
+                    <div class="seg"></div><div class="seg"></div><div class="seg"></div><div class="seg"></div><div class="seg"></div>
+                    <div class="arrow-head"></div>
+                </div>
+                <div class="node"><div class="emoji" id="delivery-truck">🚚</div><div class="label">Delivery Truck</div></div>
             </div>
-          `;
+        </div>
+    </div>
 
-          accordion.prepend(wrapper);
+    <script>
+        const vendorShop = document.getElementById("vendor-shop");
+        const invoice = document.getElementById("invoice");
+        const email = document.getElementById("email");
+        const factory = document.getElementById("factory");
+        const packageE = document.getElementById("package");
+        const deliveryTruck = document.getElementById("delivery-truck");
 
-          // Auto-collapse after 10s (only if Bootstrap Collapse API is present)
-          setTimeout(() => {
-            const collapseEl = document.querySelector(`#collapse-${idx}`);
-            if (collapseEl && window.bootstrap && window.bootstrap.Collapse) {
-              const inst = window.bootstrap.Collapse.getOrCreateInstance(collapseEl);
-              inst.hide();
-            }
-          }, 10000);
+        const cog1 = document.getElementById("cog1");
+        const cog2 = document.getElementById("cog2");
+        const cog3 = document.getElementById("cog3");
+        const cog4 = document.getElementById("cog4");
+
+        const arrow1 = document.getElementById("arrow1");
+        const arrow2 = document.getElementById("arrow2");
+        const arrow3 = document.getElementById("arrow3");
+        const arrow4 = document.getElementById("arrow4");
+        const verticalArrow = document.getElementById("vertical-arrow");
+
+        const progressBox = document.getElementById("progressBox");
+        const queueBox = document.getElementById("queueBox");
+
+        let orders = [{id:"ORD-1"},{id:"ORD-2"},{id:"ORD-3"}];
+        let running = false;
+
+        function reset(){
+            running = false;
+            [vendorShop, invoice, email, factory, packageE, deliveryTruck].forEach(e => e.classList.remove("active"));
+            [cog1, cog2, cog3, cog4].forEach(c => c.classList.remove("spinning"));
+            [arrow1, arrow2, arrow3, arrow4].forEach(a => {
+                a.classList.remove("visible");
+                [...a.children].forEach(seg => seg.classList.remove("lit"));
+            });
+            verticalArrow.classList.remove("visible");
+            [...verticalArrow.children].forEach(seg => seg.classList.remove("lit"));
+            progressBox.textContent = "0%";
+            renderQueue();
         }
-      };
-    });
-  </script>
+
+        function renderQueue(current=null, done=[]){
+            if(!orders.length){queueBox.textContent = "Queue: none"; return;}
+            queueBox.innerHTML = orders.map(o => {
+                if(done.includes(o.id)) return `<div class="done">${o.id}</div>`;
+                if(o.id === current) return `<div class="current">${o.id}</div>`;
+                return `<div>${o.id}</div>`;
+            }).join("");
+        }
+
+        function lightArrow(arrowElement, reverse=false, isVertical=false){
+            return new Promise(resolve => {
+                arrowElement.classList.add("visible");
+                const segs = isVertical ? 
+                             [...arrowElement.querySelectorAll(".vertical-arrow-seg"), arrowElement.querySelector(".vertical-arrow-head")] :
+                             [...arrowElement.querySelectorAll(".seg"), arrowElement.querySelector(".arrow-head")];
+                
+                const segmentsToLight = reverse ? segs.slice().reverse() : segs;
+                let i = 0;
+                function step(){
+                    if(i < segmentsToLight.length){
+                        segmentsToLight[i].classList.add("lit");
+                        i++;
+                        setTimeout(step, 250);
+                    } else {
+                        resolve();
+                    }
+                }
+                step();
+            });
+        }
+
+                function lightArrowReverse(arrowElement, reverse=true, isVertical=false){
+            return new Promise(resolve => {
+                arrowElement.classList.add("visible");
+                const segs = isVertical ? 
+                             [...arrowElement.querySelectorAll(".vertical-arrow-seg"), arrowElement.querySelector(".vertical-arrow-head")] :
+                             [...arrowElement.querySelectorAll(".seg"), arrowElement.querySelector(".arrow-head")];
+                
+                const segmentsToLight = reverse ? segs.slice().reverse() : segs;
+                let i = 0;
+                function step(){
+                    if(i < segmentsToLight.length){
+                        segmentsToLight[i].classList.add("lit");
+                        i++;
+                        setTimeout(step, 250);
+                    } else {
+                        resolve();
+                    }
+                }
+                step();
+            });
+        }
+
+        async function process(order){
+            let completedSteps = 0;
+            const totalSteps = 12;
+
+            const updateOverallProgress = () => {
+                completedSteps++;
+                const currentProgress = (completedSteps / totalSteps) * 100;
+                progressBox.textContent = `${currentProgress.toFixed(0)}%`;
+            };
+
+            renderQueue(order.id);
+
+            // Stage 1: Vendor Shop -> Invoice
+            vendorShop.classList.add("active");
+            cog1.classList.add("spinning");
+            await lightArrow(arrow1);
+            cog1.classList.remove("spinning");
+            vendorShop.classList.remove("active");
+            invoice.classList.add("active");
+            updateOverallProgress();
+
+            // Stage 2: Invoice -> Email
+            cog2.classList.add("spinning");
+            await lightArrow(arrow2);
+            cog2.classList.remove("spinning");
+            invoice.classList.remove("active");
+            email.classList.add("active");
+            updateOverallProgress();
+
+            // Stage 3: Email -> Factory (Vertical Connector)
+            await new Promise(r => setTimeout(r, 500));
+            await lightArrow(verticalArrow, false, true);
+            email.classList.remove("active");
+            factory.classList.add("active");
+            updateOverallProgress();
+
+            // Stage 4: Factory -> Package (bottom row, right-to-left flow)
+            cog4.classList.add("spinning");
+            await lightArrowReverse(arrow4, false);
+            cog4.classList.remove("spinning");
+            factory.classList.remove("active");
+            packageE.classList.add("active");
+            updateOverallProgress();
+            
+            // Stage 5: Package -> Delivery Truck (bottom row, right-to-left flow)
+            cog3.classList.add("spinning");
+            await lightArrowReverse(arrow3, false);
+            cog3.classList.remove("spinning");
+            packageE.classList.remove("active");
+            deliveryTruck.classList.add("active");
+            updateOverallProgress();
+            
+            // Final stage: Delivery Truck
+            await new Promise(r => setTimeout(r, 1000));
+            deliveryTruck.classList.remove("active");
+            
+            // Reset all arrows and progress
+            [arrow1, arrow2, arrow3, arrow4].forEach(a => {
+                a.classList.remove("visible");
+                [...a.children].forEach(seg => seg.classList.remove("lit"));
+            });
+            verticalArrow.classList.remove("visible");
+            [...verticalArrow.children].forEach(seg => seg.classList.remove("lit"));
+            progressBox.textContent = "100%";
+            renderQueue(null, orders.filter(o => o.id === order.id).map(o => o.id));
+        }
+
+        async function start(){
+            if(running) return; running = true;
+            for(const o of orders){
+                if(!running) break;
+                await process(o);
+                await new Promise(r => setTimeout(r, 1000));
+            }
+            running = false;
+        }
+
+        document.getElementById("startBtn").onclick = start;
+        document.getElementById("resetBtn").onclick = reset;
+
+        reset();
+    </script>
 </body>
 </html>

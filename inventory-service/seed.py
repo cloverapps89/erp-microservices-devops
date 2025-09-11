@@ -36,7 +36,7 @@ def random_timestamp():
     return now - delta
 
 # 🏗️ Generate inventory
-def generate_inventory(n=500):
+def generate_inventory(n=1):
     items = []
     categories = list(emoji_map.keys())
     for _ in range(n):
@@ -45,7 +45,7 @@ def generate_inventory(n=500):
         item = InventoryItem(
             name=f"{category.capitalize()} Item {random.randint(1, 999)}",
             sku=generate_sku(),
-            quantity=random.randint(5000, 50000),
+            quantity=random.randint(100, 500),
             price=random.randint(100, 9999),
             emoji=emoji
         )

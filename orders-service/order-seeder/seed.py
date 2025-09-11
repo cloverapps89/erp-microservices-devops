@@ -46,17 +46,25 @@ async def fetch_inventory(client):
 
 
 
-def generate_order_payload(inventory):
+def generate_order_payload(inventory, order_qty=1):
+    
     if not inventory:
+        print(f"❌ Failed due to no inventory...")
         return None
     cust = random_customer()
-    items = random.sample(inventory, k=min(len(inventory), random.randint(1, 5)))
+    items = random.sample(inventory, k=min(len(inventory), random.randint(1, 1)))
+    #random.randint(1, min(item["quantity"], 10))
     items_payload = [
-        {"sku": item["sku"], "quantity": random.randint(1, min(item["quantity"], 10)), "price": item["price"]}
-        for item in items if item["quantity"] > 0
+        {"sku": item["sku"], "quantity": order_qty, "price": item["price"]}
+        for item in items if item["quantity"] >= 0 
     ]
     if not items_payload:
+        print(f"❌ Failed due to no order...")
         return None
+    for item in items_payload: 
+        sku = item["sku"]
+        qty = item["quantity"]
+        print(f"✅ Order created...sku: {sku}, qty: {qty}", flush=True)
     return {
         "order_number": f"{int(datetime.now().timestamp())}{random.randint(100,999)}",
         "customer_name": cust["name"],
@@ -74,10 +82,11 @@ async def seed_orders(n=10, batch_size=5):
             return
 
         for i in range(0, n, batch_size):
-            
-            batch = [generate_order_payload(inventory) for _ in range(batch_size)]
+            #await asyncio.sleep(10)
+            batch = [generate_order_payload(inventory, order_qty=100) for _ in range(batch_size)]
             batch = [b for b in batch if b]  # drop Nones
             if not batch:
+                
                 continue
 
             try:
@@ -85,10 +94,11 @@ async def seed_orders(n=10, batch_size=5):
                 resp.raise_for_status()
                 print(f"✅ Batch {i//batch_size + 1}", flush=True)
             except Exception as e:
-                print(f"⚠️ Failed batch {i//batch_size + 1}: {e}", flush=True)
+                print(f"⚠️ Failed batch {i//batch_size + 1}: {e.with_traceback}", flush=True)
+                
 
 async def main():
-    await seed_orders(n=400, batch_size=25)
+    await seed_orders(n=1, batch_size=1)
     print("🏁 DONE")
 
 if __name__ == "__main__":

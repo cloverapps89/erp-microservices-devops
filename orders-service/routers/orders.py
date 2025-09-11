@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from db import get_session
 from models import Customer, OrderItem, OrderInventoryLink
 from sse import broadcast_event
-from inventory_client import fetch_inventory, validate_stock, decrement_inventory
+from inventory_client import fetch_inventory, validate_stock, decrement_inventory, increment_inventory
 
 from pathlib import Path
 
@@ -91,7 +91,7 @@ async def create_orders(request: Request, session: AsyncSession = Depends(get_se
                 continue
 
             # ✅ Validate stock before creating
-            await validate_stock(items_data)
+            status, stock_up = await validate_stock(items_data)
 
             # Ensure customer exists or create
             customer_obj = None
@@ -117,17 +117,30 @@ async def create_orders(request: Request, session: AsyncSession = Depends(get_se
                 )
                 for item in items_data
             ]
-            order_links_data = [{"sku": item["sku"], "quantity": item["quantity"], "price": item.get("price", 0)} for item in items_data]
-
+            print(f"⚠️⚠️⚠️TEST⚠️⚠️⚠️ {status}, {stock_up}", flush=True)
+            # Update inventory
+            if status is True:
+                print(f"⚠️⚠️⚠️TEST⚠️⚠️⚠️ HYDRATING SKU {stock_up}")
+                order_links_data = [{"sku": item["sku"], "quantity": stock_up, "price": item.get("price", 0)} for item in items_data]
+                updated_stock_for_order = await increment_inventory(order_links_data)
+                updated_stock_for_order.update(updated_stock_for_order)
+            elif status is False:
+                print(f"⚠️⚠️⚠️TEST⚠️⚠️⚠️ CLEANING OUT SKU {stock_up}")
+                order_links_data = [{"sku": item["sku"], "quantity": stock_up, "price": item.get("price", 0)} for item in items_data]
+                updated_stock_for_order = await decrement_inventory(order_links_data)
+                updated_stock_for_order.update(updated_stock_for_order)
+            else:
+                stock = next(iter(stock_up.values()))
+                print(f"⚠️⚠️⚠️TEST⚠️⚠️⚠️ REGULAR ORDER {stock["quantity"]}")
+                order_links_data = [{"sku": item["sku"], "quantity": item["quantity"], "price": item.get("price", 0)} for item in items_data]
+                updated_stock_for_order = await decrement_inventory(order_links_data)
+                updated_stock.update(updated_stock_for_order)
+            
             order = OrderItem(order_number=order_number, customer_id=customer_obj.id, items=order_links)
             session.add(order)
 
             # Flush so we get order.id
             await session.flush()
-
-            # Update inventory
-            updated_stock_for_order = await decrement_inventory(order_links_data)
-            updated_stock.update(updated_stock_for_order)
 
             # Reload order with customer
             result = await session.execute(
@@ -149,6 +162,7 @@ async def create_orders(request: Request, session: AsyncSession = Depends(get_se
             })
 
         # Commit all orders in one DB transaction
+        print(f"✅ Order submitted & sent to workflow...", flush=True)
         await session.commit()
 
     except Exception as e:
